@@ -4,16 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "PlayerCharacter.generated.h"
+#include "Camera/CameraComponent.h"
+#include "FPCharacter.generated.h"
 
 UCLASS()
-class VOIDROOM_API APlayerCharacter : public ACharacter
+class VOIDROOM_API AFPCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
-	APlayerCharacter();
+	AFPCharacter();
 
 protected:
 	// Called when the game starts or when spawned
@@ -25,5 +26,11 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// Called when movement mode changes
+	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
+
+private:
+	UCameraComponent* CameraComponent;
 
 };
