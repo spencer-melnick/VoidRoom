@@ -17,4 +17,6 @@ class VOIDROOM_API AVoidRoomGameModeBase : public AGameModeBase
 
 	virtual void StartPlay() override;
 
+private:
+	
 };
