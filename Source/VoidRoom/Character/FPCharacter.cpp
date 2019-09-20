@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Math/UnrealMathUtility.h"
 
 // Sets default values
 AFPCharacter::AFPCharacter()
@@ -26,6 +27,7 @@ void AFPCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	CameraHeight = BaseEyeHeight;
 }
 
 // Called every frame
@@ -36,15 +38,24 @@ void AFPCharacter::Tick(float DeltaTime)
 	// Make the camera face wherever the player controller (and by extension the characer) is looking
 	CameraComponent->SetWorldRotation(GetViewRotation());
 
+	float CapsuleHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+	FVector CapsuleBase = FVector::DownVector * CapsuleHalfHeight;
+
 	// Adjust eye height based on current state
-	float EyeHeight = BaseEyeHeight;
 	if (bIsCrouched)
 	{
-		EyeHeight = CrouchedEyeHeight;
+		CameraHeight -= CrouchSpeed * DeltaTime;
+		CameraHeight = FMath::Max(CameraHeight, CapsuleHalfHeight + BaseEyeHeight);
 	}
+	else
+	{
+		CameraHeight += CrouchSpeed * DeltaTime;
+		CameraHeight = FMath::Min(CameraHeight, CapsuleHalfHeight + BaseEyeHeight);	
+	}
+	
 
 	// Set camera height to eye height
-	CameraComponent->SetRelativeLocation(FVector::UpVector * EyeHeight);
+	CameraComponent->SetRelativeLocation(CapsuleBase + FVector::UpVector * CameraHeight);
 }
 
 // Called to bind functionality to input
@@ -56,6 +67,6 @@ void AFPCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 
 void AFPCharacter::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Movement mode changed"));
+	UE_LOG(LogTemp, Display, TEXT("Movement mode changed"));
 }
 

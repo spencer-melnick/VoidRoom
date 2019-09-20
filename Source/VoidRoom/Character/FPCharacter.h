@@ -30,7 +30,11 @@ public:
 	// Called when movement mode changes
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float CrouchSpeed = 10.0f;
+
 private:
 	UCameraComponent* CameraComponent;
+	float CameraHeight;
 
 };
