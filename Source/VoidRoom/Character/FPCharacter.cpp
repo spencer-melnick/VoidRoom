@@ -22,7 +22,9 @@ AFPCharacter::AFPCharacter()
 	CameraComponent->SetupAttachment(GetCapsuleComponent());
 	CameraComponent->SetRelativeLocation(FVector(0.0f, 0.0f, BaseEyeHeight));
 
+	// Enable crouching
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
+	GetCharacterMovement()->bCanWalkOffLedgesWhenCrouching = true;
 }
 
 // Called when the game starts or when spawned
@@ -47,6 +49,16 @@ void AFPCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void AFPCharacter::UnPossessed()
+{
+	if (ViewBobInst != nullptr)
+	{
+		// If we have a view bob animation playing, remove it 
+		ViewBobInst->Stop();
+		ViewBobInst = nullptr;
+	}
 }
 
 void AFPCharacter::AdjustCameraPosition(float DeltaTime)

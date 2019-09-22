@@ -31,6 +31,9 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Called when character is unpossessed by a controller
+	virtual void UnPossessed() override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	float CrouchSpeed = 10.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
