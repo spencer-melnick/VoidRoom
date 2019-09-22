@@ -3,8 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/CameraAnim.h"
+#include "Camera/CameraAnimInst.h"
+
 #include "FPCharacter.generated.h"
 
 UCLASS()
@@ -27,14 +31,23 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// Called when movement mode changes
-	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	float CrouchSpeed = 10.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	UCameraAnim* ViewBobAnimation;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float ViewBobFadeTime = 0.1f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float ViewBobScale = 1.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
+	float ViewBobSpeedScale = 2.0f;
 
 private:
 	UCameraComponent* CameraComponent;
 	float CameraHeight;
+	bool bWasWalking = false;
+	UCameraAnimInst* ViewBobInst = nullptr;
 
+	void AdjustCameraPosition(float DeltaTime);
+	void AttemptViewBob();
 };
