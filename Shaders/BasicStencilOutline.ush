@@ -1,0 +1,28 @@
+    const uint StencilLayer = 25;
+    const uint ImageLayer = 14;
+
+    float2 texel_size = View.ViewSizeAndInvSize.zw;
+    float2 uv = GetDefaultSceneTextureUV(Parameters, StencilLayer);
+
+    if (SceneTextureLookup(uv, StencilLayer, false).r == 0) {
+        bool adjacent_to_stencil = false;
+
+        [loop]
+        for (float i = -Radius; i <= Radius; i++) {
+            [loop]
+            for (float j = -Radius; j <= Radius; j++) {
+                if (i == 0 && j == 0) {
+                    continue;
+                }
+
+                float2 pixel_offset = float2(i, j);
+                float2 uv_offset = pixel_offset * texel_size;
+
+                if (SceneTextureLookup(uv + uv_offset, StencilLayer, false).r != 0) {
+                    return Color.rgb;
+                }
+            }
+        }
+    }
+
+    return SceneTextureLookup(uv, ImageLayer, false).rgb;

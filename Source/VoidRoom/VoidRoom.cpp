@@ -2,5 +2,20 @@
 
 #include "VoidRoom.h"
 #include "Modules/ModuleManager.h"
+#include "Interfaces/IPluginManager.h"
+#include "Logging/LogMacros.h"
+#include "Misc/Paths.h"
 
-IMPLEMENT_PRIMARY_GAME_MODULE( FDefaultGameModuleImpl, VoidRoom, "VoidRoom" );
+//#define LOCTEXT_NAMESPACE "FILikeTrainsModule"
+
+void FVoidRoomModule::StartupModule()
+{
+    FString ShaderDirectory = FPaths::Combine(FPaths::ProjectDir(), TEXT("Shaders"));
+    AddShaderSourceDirectoryMapping("/Project", ShaderDirectory);
+}
+
+void FVoidRoomModule::ShutdownModule()
+{
+}
+
+IMPLEMENT_PRIMARY_GAME_MODULE(FVoidRoomModule, VoidRoom, "VoidRoom" );
