@@ -7,9 +7,6 @@
 void AVoidRoomGameModeBase::StartPlay() {
     Super::StartPlay();
 
-    if (GEngine) {
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Yellow, TEXT("This is an on screen message!"));
-    }
 }
 
 bool AVoidRoomGameModeBase::RegisterItem(int16 ID, FString Name){
