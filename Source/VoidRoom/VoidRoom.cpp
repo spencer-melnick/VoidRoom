@@ -19,4 +19,9 @@ void FVoidRoomModule::ShutdownModule()
     ResetAllShaderSourceDirectoryMappings();
 }
 
+bool FVoidRoomModule::IsGameModule() const
+{
+    return true;
+}
+
 IMPLEMENT_PRIMARY_GAME_MODULE(FVoidRoomModule, VoidRoom, "VoidRoom" );
