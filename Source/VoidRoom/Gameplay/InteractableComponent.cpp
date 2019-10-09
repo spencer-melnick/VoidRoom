@@ -16,8 +16,6 @@ UInteractableComponent::UInteractableComponent()
 void UInteractableComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
-	ShowHighlight();
 }
 
 
@@ -58,5 +56,15 @@ void UInteractableComponent::HideHighlight()
 		// Tell the engine to update the mesh state
 		i->MarkRenderStateDirty();
 	}
+}
+
+void UInteractableComponent::OnBecomeFocus()
+{
+	ShowHighlight();
+}
+
+void UInteractableComponent::OnEndFocus()
+{
+	HideHighlight();
 }
 

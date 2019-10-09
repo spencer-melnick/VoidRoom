@@ -26,7 +26,17 @@ private:
 
 	void Crouch();
 	void UnCrouch();
+
+	void CheckFocus();
+	void FocusOnActor(AActor* Target);
+	void EndFocusOnActor(AActor* Target);
+
+	AActor* FocusedActor = nullptr;
 	
 public:
+	virtual void Tick(float DeltaTime) override;
 	virtual void SetupInputComponent() override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	float FocusRange = 200.0f;
 };
