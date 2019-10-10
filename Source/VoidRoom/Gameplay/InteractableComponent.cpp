@@ -29,8 +29,6 @@ void UInteractableComponent::ShowHighlight()
 	TInlineComponentArray<UMeshComponent*> MeshComponents;
 	GetOwner()->GetComponents(MeshComponents);
 
-	UE_LOG(LogTemp, Display, TEXT("Highlighting mesh"));
-
 	for (auto& i : MeshComponents)
 	{
 		// Enable drawing to the stencil buffer with the correct value to render outlines

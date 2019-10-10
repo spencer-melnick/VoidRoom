@@ -59,60 +59,47 @@ void AVoidPlayerController::UnCrouch()
 
 void AVoidPlayerController::CheckFocus()
 {
-    ACharacter* PossessedPawn = Cast<ACharacter>(GetPawn());
+    // Get the look ray from the camera point of view
+    FVector RayStart = PlayerCameraManager->GetCameraLocation();
+    FVector RayDir = PlayerCameraManager->GetCameraRotation().RotateVector(FVector::ForwardVector);
+    FVector RayEnd = RayStart + RayDir * FocusRange;
 
-    if (PossessedPawn)
+    // Perform a line trace against all visible objects
+    FHitResult TraceResult;
+    bool bDidHitTrace = GetWorld()->LineTraceSingleByChannel(TraceResult, RayStart, RayEnd, ECollisionChannel::ECC_Visibility);
+    AActor* TracedActor = TraceResult.GetActor();
+
+    // Consider a nullptr for traced actor as a failed hit
+    if (bDidHitTrace && TracedActor != nullptr)
     {
-        FVector RayStart = PossessedPawn->GetTransform().GetLocation();
-        FVector RayDir = GetControlRotation().RotateVector(FVector::ForwardVector);
-        FVector RayEnd = RayStart + RayDir * FocusRange;
-
-        FName TraceTag("DebugTrace");
-        GetWorld()->DebugDrawTraceTag = TraceTag;
-        
-        FHitResult TraceResult;
-        FCollisionQueryParams TraceParams;
-        TraceParams.TraceTag = TraceTag;
-
-        if (GetWorld()->LineTraceSingleByChannel(TraceResult, RayStart, RayEnd, ECollisionChannel::ECC_Visibility, TraceParams))
+        // If a new actor is in focus, trigger events
+        if (FocusedActor != TracedActor)
         {
-            AActor* TracedActor = TraceResult.GetActor();
-
-            if (FocusedActor != TracedActor)
-            {
-                if (FocusedActor != nullptr)
-                {
-                    EndFocusOnActor(FocusedActor);
-                }
-
-                FocusOnActor(TracedActor);
-                FocusedActor = TracedActor;
-            }
+            EndFocusOnActor(FocusedActor);
+            FocusOnActor(TracedActor);
+            FocusedActor = TracedActor;
         }
-        else
-        {
-            if (FocusedActor != nullptr)
-            {
-                EndFocusOnActor(FocusedActor);
-                FocusedActor = nullptr;
-            }
-        }
+    }
+    else
+    {
+        // If no actor is traced, unfocus on exisiting factor
+        EndFocusOnActor(FocusedActor);
+        FocusedActor = nullptr;
     }
 }
 
 void AVoidPlayerController::FocusOnActor(AActor* Target)
 {
-    if (Target == nullptr)
+    // Check for valid target
+    if (Target != nullptr)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Attempting to end focus on null actor"));
-    }
-    else
-    {
+        // Get all InteractableComponents (if any) in the target
         TInlineComponentArray<UInteractableComponent*> InteractableComponents;
         Target->GetComponents<UInteractableComponent>(InteractableComponents, false);
 
         for (auto& i : InteractableComponents)
         {
+            // Trigger focus events
             i->OnBecomeFocus();
         }
     }
@@ -120,17 +107,16 @@ void AVoidPlayerController::FocusOnActor(AActor* Target)
 
 void AVoidPlayerController::EndFocusOnActor(AActor* Target)
 {
-    if (Target == nullptr)
+    // Check for valid target
+    if (Target != nullptr)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Attempting to end focus on null actor"));
-    }
-    else
-    {
+        // Get all InteractableComponents (if any) in the target
         TInlineComponentArray<UInteractableComponent*> InteractableComponents;
         Target->GetComponents<UInteractableComponent>(InteractableComponents, false);
 
         for (auto& i : InteractableComponents)
         {
+            // Trigger focus events
             i->OnEndFocus();
         }
     }
