@@ -27,6 +27,10 @@ private:
 	void Crouch();
 	void UnCrouch();
 
+	void PressPrimary();
+	void ReleasePrimary();
+
+	// Used for looking at/away from objects
 	void CheckFocus();
 	void FocusOnActor(AActor* Target);
 	void EndFocusOnActor(AActor* Target);

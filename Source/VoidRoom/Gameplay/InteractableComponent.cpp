@@ -66,3 +66,13 @@ void UInteractableComponent::OnEndFocus()
 	HideHighlight();
 }
 
+bool UInteractableComponent::OnGrabbed()
+{
+	UE_LOG(LogTemp, Display, TEXT("OnGrabbed"));
+	return true;
+}
+
+void UInteractableComponent::OnDropped()
+{
+	UE_LOG(LogTemp, Display, TEXT("OnDropped"));
+}

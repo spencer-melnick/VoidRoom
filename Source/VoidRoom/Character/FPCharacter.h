@@ -34,6 +34,12 @@ public:
 	// Called when character is unpossessed by a controller
 	virtual void UnPossessed() override;
 
+
+	// Used to pickup and drop objects
+	void GrabObject(AActor* Object);
+	void DropObject();
+	AActor* GetHeldObject() const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
 	float CrouchSpeed = 10.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Camera)
@@ -50,6 +56,8 @@ private:
 	float CameraHeight;
 	bool bWasWalking = false;
 	UCameraAnimInst* ViewBobInst = nullptr;
+
+	AActor* HeldObject = nullptr;
 
 	void AdjustCameraPosition(float DeltaTime);
 	void AttemptViewBob();

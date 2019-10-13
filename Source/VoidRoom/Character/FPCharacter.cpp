@@ -11,6 +11,8 @@
 
 #include "Math/UnrealMathUtility.h"
 
+#include "../Gameplay/InteractableComponent.h"
+
 // Sets default values
 AFPCharacter::AFPCharacter()
 {
@@ -59,6 +61,45 @@ void AFPCharacter::UnPossessed()
 		ViewBobInst->Stop();
 		ViewBobInst = nullptr;
 	}
+}
+
+void AFPCharacter::GrabObject(AActor* Object) 
+{
+	UInteractableComponent* InteractableComponent = Object->FindComponentByClass<UInteractableComponent>();
+
+	if (InteractableComponent != nullptr)
+	{
+		if (HeldObject != nullptr)
+		{
+			DropObject();
+		}
+
+		// InteractableComponent returns true from OnGrabbed() if it should be held
+		if (InteractableComponent->OnGrabbed())
+		{
+			HeldObject = Object;
+		}
+	}
+}
+
+void AFPCharacter::DropObject()
+{
+	if (HeldObject != nullptr)
+	{
+		UInteractableComponent* InteractableComponent = HeldObject->FindComponentByClass<UInteractableComponent>();
+
+		if (InteractableComponent != nullptr)
+		{
+			InteractableComponent->OnDropped();
+		}
+	}
+
+	HeldObject = nullptr;
+}
+
+AActor* AFPCharacter::GetHeldObject() const
+{
+	return HeldObject;
 }
 
 void AFPCharacter::AdjustCameraPosition(float DeltaTime)

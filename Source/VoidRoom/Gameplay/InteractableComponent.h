@@ -24,8 +24,15 @@ protected:
 public:	
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	// Used when a controller looks at or away from this object
 	virtual void OnBecomeFocus();
 	virtual void OnEndFocus();
+
+	// Used when a pawn interacts with the object
+	// OnGrabbed() should return whether or not to hold the object after the interaction
+	virtual bool OnGrabbed();
+	virtual void OnDropped();
 
 private:
 	void ShowHighlight();

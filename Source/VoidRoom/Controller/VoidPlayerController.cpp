@@ -8,6 +8,8 @@
 #include "Engine/World.h"
 #include "../Gameplay/InteractableComponent.h"
 
+#include "../Character/FPCharacter.h"
+
 
 AVoidPlayerController::AVoidPlayerController()
 {
@@ -54,6 +56,29 @@ void AVoidPlayerController::UnCrouch()
     if (PossessedPawn)
     {
         PossessedPawn->UnCrouch();
+    }
+}
+
+void AVoidPlayerController::PressPrimary()
+{
+    AFPCharacter* PossessedPawn = Cast<AFPCharacter>(GetPawn());
+
+    if (PossessedPawn != nullptr && FocusedActor != nullptr)
+    {
+        PossessedPawn->GrabObject(FocusedActor);
+    }
+}
+
+void AVoidPlayerController::ReleasePrimary()
+{
+    AFPCharacter* PossessedPawn = Cast<AFPCharacter>(GetPawn());
+
+    if (PossessedPawn != nullptr)
+    {
+        if (PossessedPawn->GetHeldObject() != nullptr)
+        {
+            PossessedPawn->DropObject();
+        }
     }
 }
 
@@ -136,10 +161,19 @@ void AVoidPlayerController::SetupInputComponent()
     // Bind actions
     InputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &AVoidPlayerController::Crouch);
     InputComponent->BindAction("Crouch", EInputEvent::IE_Released, this, &AVoidPlayerController::UnCrouch);
+
+    InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVoidPlayerController::PressPrimary);
+    InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Released, this, &AVoidPlayerController::ReleasePrimary);
 }
 
 void AVoidPlayerController::Tick(float DeltaTime)
 {
-    CheckFocus();
+    AFPCharacter* PossessedPawn = Cast<AFPCharacter>(GetPawn());
+
+    // Only update if pawn is holding an object
+    if (PossessedPawn == nullptr || PossessedPawn->GetHeldObject() == nullptr)
+    {
+        CheckFocus();
+    }
 }
 
