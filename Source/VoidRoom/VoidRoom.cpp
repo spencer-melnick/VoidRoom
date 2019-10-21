@@ -6,7 +6,7 @@
 #include "Logging/LogMacros.h"
 #include "Misc/Paths.h"
 
-//#define LOCTEXT_NAMESPACE "FILikeTrainsModule"
+DEFINE_LOG_CATEGORY(LogVD);
 
 void FVoidRoomModule::StartupModule()
 {
