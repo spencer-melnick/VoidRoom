@@ -19,7 +19,10 @@ void UInteractableComponent::OnUnfocused()
 	HideHighlight();
 }
 
-
+void UInteractableComponent::OnInteract(AVDCharacter* Character)
+{
+	UE_LOG(LogVD, Log, TEXT("Character %s has interacted with incomplete interactable component %s"), *GetNameSafe(Character), *GetNameSafe(this));
+}
 
 
 // VD protected interface

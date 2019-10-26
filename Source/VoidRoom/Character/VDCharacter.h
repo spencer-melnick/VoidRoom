@@ -32,6 +32,8 @@ public:
 	void StartUncrouch();
 	void ToggleCrouch();
 
+	void Interact();
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
 

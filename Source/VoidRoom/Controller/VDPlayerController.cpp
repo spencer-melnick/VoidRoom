@@ -25,6 +25,7 @@ void AVDPlayerController::SetupInputComponent()
     // Bind actions
     InputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &AVDPlayerController::Crouch);
     InputComponent->BindAction("Crouch", EInputEvent::IE_Released, this, &AVDPlayerController::UnCrouch);
+    InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
 }
 
 
@@ -68,5 +69,15 @@ void AVDPlayerController::UnCrouch()
     if (PossessedPawn)
     {
         PossessedPawn->StartUncrouch();
+    }
+}
+
+void AVDPlayerController::Interact()
+{
+    AVDCharacter* PossessedPawn = Cast<AVDCharacter>(GetPawn());
+
+    if (PossessedPawn)
+    {
+        PossessedPawn->Interact();
     }
 }

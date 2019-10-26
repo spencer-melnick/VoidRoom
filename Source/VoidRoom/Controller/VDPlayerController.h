@@ -29,5 +29,7 @@ protected:
 
 	void Crouch();
 	void UnCrouch();
+
+	void Interact();
 	
 };

@@ -25,6 +25,7 @@ AVDCharacter::AVDCharacter()
 	// Spawn first person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(ViewAttachment);
+	FirstPersonCamera->FieldOfView = 90.f;
 	UpdateViewRotation();
 
 	// Set movement component parameters
@@ -108,6 +109,23 @@ void AVDCharacter::StartUncrouch()
 void AVDCharacter::ToggleCrouch()
 {
 	bAttemptingCrouch = !bAttemptingCrouch;
+}
+
+void AVDCharacter::Interact()
+{
+	if (FocusedActor != nullptr)
+	{
+		TInlineComponentArray<UInteractableComponent*> InteractableComponents(FocusedActor);
+		FocusedActor->GetComponents<UInteractableComponent>(InteractableComponents, true);
+
+		for (auto& i : InteractableComponents)
+		{
+			if (i != nullptr)
+			{
+				i->OnInteract(this);
+			}
+		}
+	}
 }
 
 
