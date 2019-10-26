@@ -14,3 +14,10 @@ public:
     virtual void ShutdownModule() override;
     virtual bool IsGameModule() const override;
 };
+
+namespace VDGame
+{
+    const char StencilOutlineFlag = 0x2;
+
+    const ECollisionChannel FocusOpaqueChannel = ECollisionChannel::ECC_GameTraceChannel1;
+}

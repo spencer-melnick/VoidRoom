@@ -26,6 +26,7 @@ public:
 	float GetCurrentEyeHeightFromCenter() const;
 	float GetCurrentEyeHeightFromGround() const;
 	FVector GetViewLocation() const;
+	AActor* GetFocusedActor() const;
 
 	void StartCrouch();
 	void StartUncrouch();
@@ -34,16 +35,23 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float MaxFocusDistance = 500.f;
+
 protected:
 	virtual void BeginPlay() override;
 
 	void CheckCrouch();
 	void AdjustEyeHeight(float DeltaTime);
 	void UpdateViewRotation();
+	void CheckFocus();
 
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
 	float EyeHeightFromGround;
 	bool bAttemptingCrouch = false;
 
+
+	// UPROPERTY(Replicated)
+	AActor* FocusedActor = nullptr;
 };

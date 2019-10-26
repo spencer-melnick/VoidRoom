@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "VoidRoom.h"
+#include "../Gameplay/InteractableComponent.h"
 
 AVDCharacter::AVDCharacter()
 {
@@ -49,6 +50,7 @@ void AVDCharacter::Tick(float DeltaTime)
 	CheckCrouch();
 	AdjustEyeHeight(DeltaTime);
 	UpdateViewRotation();
+	CheckFocus();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -85,6 +87,13 @@ FVector AVDCharacter::GetViewLocation() const
 {
 	return ViewAttachment->GetComponentLocation();
 }
+
+AActor* AVDCharacter::GetFocusedActor() const
+{
+	return FocusedActor;
+}
+
+
 
 void AVDCharacter::StartCrouch()
 {
@@ -173,4 +182,56 @@ void AVDCharacter::UpdateViewRotation()
 {
 	FRotator ControlRotation = GetControlRotation();
 	GetViewAttachment()->SetRelativeRotation(FRotator(ControlRotation.Pitch, 0.f, 0.f));
+}
+
+void AVDCharacter::CheckFocus()
+{
+	// Setup line trace start and end
+	FVector TraceStart = ViewAttachment->GetComponentLocation();
+	FVector TraceOffset = ViewAttachment->GetComponentRotation().RotateVector(FVector::ForwardVector);
+	TraceOffset *= MaxFocusDistance;
+	FVector TraceEnd = TraceStart + TraceOffset;
+
+	// Perform trace against visibility channel
+	AActor* HitActor = nullptr;
+	FHitResult HitResult;
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility))
+	{
+		HitActor = HitResult.GetActor();
+	}
+
+	// If we're looking at a new actor
+	if (FocusedActor != HitActor)
+	{
+		// Notify all of the previous interactable components they have been unfocused
+		if (FocusedActor != nullptr)
+		{
+			TInlineComponentArray<UInteractableComponent*> InteractableComponents(FocusedActor);
+			FocusedActor->GetComponents<UInteractableComponent>(InteractableComponents, true);
+
+			for (auto& i : InteractableComponents)
+			{
+				if (i != nullptr)
+				{
+					i->OnUnfocused();
+				}
+			}
+		}
+
+		// Notify all the new interactable components they have been focused
+		FocusedActor = HitActor;
+		if (FocusedActor != nullptr)
+		{
+			TInlineComponentArray<UInteractableComponent*> InteractableComponents(this);
+			FocusedActor->GetComponents<UInteractableComponent>(InteractableComponents, true);
+
+			for (auto& i : InteractableComponents)
+			{
+				if (i != nullptr)
+				{
+					i->OnFocused();
+				}
+			}
+		}
+	}
 }

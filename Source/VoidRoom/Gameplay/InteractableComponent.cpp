@@ -4,25 +4,25 @@
 #include "InteractableComponent.h"
 
 #include "Components/MeshComponent.h"
+#include "VoidRoom.h"
 
-// Sets default values for this component's properties
-UInteractableComponent::UInteractableComponent()
+
+// VD public interface
+
+void UInteractableComponent::OnFocused()
 {
-	
+	ShowHighlight();
+}
+
+void UInteractableComponent::OnUnfocused()
+{
+	HideHighlight();
 }
 
 
-// Called when the game starts
-void UInteractableComponent::BeginPlay()
-{
-	Super::BeginPlay();
-}
 
 
-void UInteractableComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-}
+// VD protected interface
 
 void UInteractableComponent::ShowHighlight()
 {
@@ -34,7 +34,7 @@ void UInteractableComponent::ShowHighlight()
 		// Enable drawing to the stencil buffer with the correct value to render outlines
 		i->bRenderCustomDepth = true;
 		i->CustomDepthStencilWriteMask = ERendererStencilMask::ERSM_255;
-		i->CustomDepthStencilValue = StencilOutlineValue;
+		i->CustomDepthStencilValue |= VDGame::StencilOutlineFlag;
 
 		// Tell the engine to update the mesh state
 		i->MarkRenderStateDirty();
@@ -49,30 +49,9 @@ void UInteractableComponent::HideHighlight()
 	for (auto& i : MeshComponents)
 	{
 		// Disable custom stencil rendering
-		i->bRenderCustomDepth = false;
+		i->CustomDepthStencilValue &= ~VDGame::StencilOutlineFlag;
 
 		// Tell the engine to update the mesh state
 		i->MarkRenderStateDirty();
 	}
-}
-
-void UInteractableComponent::OnBecomeFocus()
-{
-	ShowHighlight();
-}
-
-void UInteractableComponent::OnEndFocus()
-{
-	HideHighlight();
-}
-
-bool UInteractableComponent::OnGrabbed()
-{
-	UE_LOG(LogTemp, Display, TEXT("OnGrabbed"));
-	return true;
-}
-
-void UInteractableComponent::OnDropped()
-{
-	UE_LOG(LogTemp, Display, TEXT("OnDropped"));
 }
