@@ -7,7 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-#include "VoidRoom.h"
+#include "../VoidRoom.h"
 #include "../Gameplay/InteractableComponent.h"
 
 AVDCharacter::AVDCharacter()
@@ -37,7 +37,8 @@ AVDCharacter::AVDCharacter()
 	else
 	{
 		MovementComponent->NavAgentProps.bCanCrouch = true;
-		MovementComponent->bCanWalkOffLedges = false;
+		MovementComponent->bCanWalkOffLedges = true;
+		MovementComponent->bCanWalkOffLedgesWhenCrouching = true;
 	}
 }
 

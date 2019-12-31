@@ -10,5 +10,7 @@ public class VoidRoomTarget : TargetRules
 		Type = TargetType.Game;
 
         ExtraModuleNames.AddRange( new string[] { "VoidRoom" } );
+
+		DefaultBuildSettings = BuildSettingsVersion.V2;
 	}
 }

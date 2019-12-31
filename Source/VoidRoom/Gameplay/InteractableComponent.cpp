@@ -4,7 +4,7 @@
 #include "InteractableComponent.h"
 
 #include "Components/MeshComponent.h"
-#include "VoidRoom.h"
+#include "../VoidRoom.h"
 
 
 // VD public interface
