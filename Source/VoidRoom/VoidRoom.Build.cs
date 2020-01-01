@@ -14,10 +14,7 @@ public class VoidRoom : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "RHI", "RenderCore"});
 
-		// Adapt for 4.24 defaults
-		bLegacyPublicIncludePaths = false;
-		ShadowVariableWarningLevel = WarningLevel.Error;
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		PublicDependencyModuleNames.AddRange(new string[] { "MovieScene", "LevelSequence" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

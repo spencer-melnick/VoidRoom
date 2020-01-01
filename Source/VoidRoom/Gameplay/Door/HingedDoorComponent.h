@@ -9,6 +9,7 @@
 
 #include "HingedDoorComponent.generated.h"
 
+
 UCLASS( ClassGroup=(VoidRoom), meta=(BlueprintSpawnableComponent) )
 class VOIDROOM_API UHingedDoorComponent : public UInteractableComponent
 {

@@ -10,5 +10,7 @@ public class VoidRoomEditorTarget : TargetRules
 		Type = TargetType.Editor;
 
 		ExtraModuleNames.AddRange( new string[] { "VoidRoom" } );
+
+		DefaultBuildSettings = BuildSettingsVersion.V2;
 	}
 }
