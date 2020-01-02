@@ -15,6 +15,7 @@ class VOIDROOM_API AVDCharacter : public ACharacter
 public:
 	AVDCharacter();
 
+	// Engine events
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 

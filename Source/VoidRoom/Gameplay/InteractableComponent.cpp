@@ -52,6 +52,7 @@ void UInteractableComponent::HideHighlight()
 	for (auto& i : MeshComponents)
 	{
 		// Disable custom stencil rendering
+		i->bRenderCustomDepth = false;
 		i->CustomDepthStencilValue &= ~VDGame::StencilOutlineFlag;
 
 		// Tell the engine to update the mesh state
