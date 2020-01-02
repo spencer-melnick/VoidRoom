@@ -4,10 +4,19 @@
 #include "GenericToggleComponent.h"
 
 #include "../VoidRoom.h"
+#include "../Utilities/SequenceUtilities.h"
 
 void UGenericToggleComponent::BeginPlay()
 {
     Super::BeginPlay();
+
+    bIsPlaying = true;
+
+    if (SequenceActor != nullptr)
+    {
+        // Automatically set pause at end (helps make animations reversible)
+        SequenceActor->PlaybackSettings.bPauseAtEnd = true;
+    }
 
     // Try to rebind a named actor in the sequence to one specified by this component
     if (bRebindActorInSequence)
@@ -17,22 +26,20 @@ void UGenericToggleComponent::BeginPlay()
 
     // Seek end of sequence if toggled at play start
     SeekStartOrEnd(bIsToggled);
-
-    bIsPlaying = true;
 }
 
 void UGenericToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    if (PropertyChangedEvent.Property->GetNameCPP() == "bIsToggled")
-    {
-        // Only try to use the sequence player if the game is running
-        if (bIsPlaying)
-        {
-            UpdateSequence();
-        }
-    }
+    // if (PropertyChangedEvent.Property->GetNameCPP() == "bIsToggled")
+    // {
+    //     // Only try to use the sequence player if the game is running
+    //     if (bIsPlaying)
+    //     {
+    //         UpdateSequence();
+    //     }
+    // }
 }
 
 void UGenericToggleComponent::OnInteract(AVDCharacter* Character)
@@ -60,32 +67,7 @@ void UGenericToggleComponent::RebindSequenceActor()
 {
     if (SequenceActor != nullptr && RebindToActor != nullptr)
     {
-        TArray<FMovieSceneBinding> SequenceBindings = SequenceActor->GetSequence()->GetMovieScene()->GetBindings();
-        FMovieSceneObjectBindingID SequenceTargetBindingID;
-        bool bFoundBinding = false;
-
-        // Search through the sequence's bindings for one matching our desired actor name
-        for (auto& i : SequenceBindings)
-        {
-            if (i.GetName() == RebindFromActorName)
-            {
-                SequenceTargetBindingID = FMovieSceneObjectBindingID(i.GetObjectGuid(), MovieSceneSequenceID::Root);
-                bFoundBinding = true;
-                break;
-            }
-        }
-
-        // If we found a binding, apply our new actor to the existing binding
-        if (bFoundBinding)
-        {
-            SequenceActor->SetBinding(SequenceTargetBindingID, TArray<AActor*>({ RebindToActor }));
-
-            UE_LOG(LogVD, Display, TEXT("UGenericToggleComponent %s rebound actor %s in sequence to actor %s"), *GetNameSafe(this), *RebindFromActorName, *RebindToActor->GetName());
-        }
-        else
-        {
-            UE_LOG(LogVD, Warning, TEXT("UGenericToggleComponent %s cannot find a binding for actor %s"), *GetNameSafe(this), *RebindFromActorName);
-        }
+        SequenceUtilities::RebindActorInSequence(SequenceActor, RebindFromActorName, RebindToActor);
     }
 }
 
