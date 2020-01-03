@@ -6,6 +6,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "DrawDebugHelpers.h"
 
 #include "../VoidRoom.h"
 #include "../Gameplay/InteractableComponent.h"
@@ -42,8 +43,9 @@ AVDCharacter::AVDCharacter()
 	}
 
 	// Setup overlap events
+	// Use a duplicate of our character capsule for overlap events
 	TriggerCapsule = CreateDefaultSubobject<UCapsuleComponent>("TriggerCapsule");
-	TriggerCapsule->AttachTo(GetCapsuleComponent());
+	TriggerCapsule->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 	TriggerCapsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	TriggerCapsule->SetCollisionProfileName("Trigger");
 	TriggerCapsule->SetGenerateOverlapEvents(true);
@@ -63,6 +65,7 @@ void AVDCharacter::Tick(float DeltaTime)
 	UpdateViewRotation();
 	CheckFocus();
 	UpdateTriggerCapsule();
+	CheckForClimbableLedge();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -284,4 +287,75 @@ void AVDCharacter::UpdateTriggerCapsule()
 	{
 		TriggerCapsule->SetCapsuleSize(RegularCapsule->GetUnscaledCapsuleRadius(), RegularCapsule->GetUnscaledCapsuleHalfHeight());
 	}
+}
+
+bool AVDCharacter::CheckForClimbableLedge()
+{
+	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
+
+	// Create collision shapes for the current state, and one explicitly for a crouching character
+	FCollisionShape RegularShape = TriggerCapsule->GetCollisionShape();
+	FCollisionShape CrouchingShape = RegularShape;
+	CrouchingShape.Capsule.HalfHeight = MovementComponent->CrouchedHalfHeight;
+	float RegularHalfHeight = RegularShape.Capsule.HalfHeight + RegularShape.Capsule.Radius;
+	float CrouchingHalfHeight = CrouchingShape.Capsule.HalfHeight + CrouchingShape.Capsule.Radius;
+
+	// Ignore character on collision test
+	FCollisionQueryParams TraceParams = FCollisionQueryParams::DefaultQueryParam;
+	TraceParams.AddIgnoredActor(this);
+
+	// Calculate trace start and end
+	FVector WallTraceStart = GetActorLocation();
+	FRotator WallTraceOrientation(0.f, ViewAttachment->GetComponentRotation().Yaw, 0.f);
+	FVector WallTraceOffset = WallTraceOrientation.RotateVector(FVector::ForwardVector * LedgeCastDistance);
+	FVector WallTraceEnd = WallTraceStart + WallTraceOffset;
+
+	// Trace using character capsule
+	FHitResult WallHitResult;
+
+	if (GetWorld()->SweepSingleByChannel(WallHitResult, WallTraceStart, WallTraceEnd, FQuat::Identity,
+		ECollisionChannel::ECC_Pawn, RegularShape, TraceParams))
+	{
+		// Get offset along floor plane
+		FVector FloorLocation = WallHitResult.ImpactPoint - WallHitResult.ImpactNormal * ClimbForwardDistance;
+		FloorLocation.Z = 0.f;
+
+		// Calculate floor height
+		float FloorHeight = GetActorLocation().Z - RegularHalfHeight;
+
+		// Calculate trace start and end
+		FVector LedgeTraceStart = FloorLocation;
+		LedgeTraceStart.Z = FloorHeight + MaxLedgeHeight + CrouchingHalfHeight;
+		FVector LedgeTraceEnd = FloorLocation;
+		LedgeTraceEnd.Z = FloorHeight + MinLedgeHeight + CrouchingHalfHeight;
+
+		// Trace using character capsule shape
+		FHitResult LedgeHitResult;
+
+		// Debug draw the start of the ledge trace
+		DrawDebugCapsule(GetWorld(), LedgeTraceStart, CrouchingShape.Capsule.HalfHeight,
+			CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Green, false, 0.1f);
+
+		if (GetWorld()->SweepSingleByChannel(LedgeHitResult, LedgeTraceStart, LedgeTraceEnd, FQuat::Identity,
+			ECollisionChannel::ECC_Pawn, CrouchingShape, TraceParams))
+		{
+			// Draw a small sphere on the ledge hit
+			DrawDebugSphere(GetWorld(), LedgeHitResult.ImpactPoint, 1.f, 16, FColor::Red, false, 0.1f);
+
+			// Calculate the angle between a flat plane and the ledge candidate
+			float SlopeDotProduct = FVector::DotProduct(FVector::UpVector, LedgeHitResult.ImpactNormal);
+			float SlopeAngle = FMath::RadiansToDegrees(FMath::Acos(SlopeDotProduct));
+
+			if (!LedgeHitResult.bStartPenetrating && SlopeAngle < MaxLedgeAngle)
+			{
+				// Debug draw where the player can stand
+				DrawDebugCapsule(GetWorld(), LedgeHitResult.Location, CrouchingShape.Capsule.HalfHeight, 
+					CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Blue, false, 0.1f);
+
+				return true;
+			}
+		}
+	}
+
+	return false;
 }

@@ -38,11 +38,23 @@ public:
 
 	void Interact();
 
+	// Editor properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float MaxFocusDistance = 500.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float LedgeCastDistance = 50.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float LedgeCastRadius = 25.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float MinLedgeHeight = 25.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float MaxLedgeHeight = 100.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float MaxLedgeAngle = 30.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
+	float ClimbForwardDistance = 20.f;
 
 protected:
 	virtual void BeginPlay() override;
@@ -53,6 +65,7 @@ protected:
 	void UpdateViewRotation();
 	void CheckFocus();
 	void UpdateTriggerCapsule();
+	bool CheckForClimbableLedge();
 
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
