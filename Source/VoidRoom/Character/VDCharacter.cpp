@@ -40,6 +40,15 @@ AVDCharacter::AVDCharacter()
 		MovementComponent->bCanWalkOffLedges = true;
 		MovementComponent->bCanWalkOffLedgesWhenCrouching = true;
 	}
+
+	// Setup overlap events
+	TriggerCapsule = CreateDefaultSubobject<UCapsuleComponent>("TriggerCapsule");
+	TriggerCapsule->AttachTo(GetCapsuleComponent());
+	TriggerCapsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	TriggerCapsule->SetCollisionProfileName("Trigger");
+	TriggerCapsule->SetGenerateOverlapEvents(true);
+	TriggerCapsule->OnComponentBeginOverlap.AddDynamic(this, &AVDCharacter::OnBeginOverlap);
+	UpdateTriggerCapsule();
 }
 
 
@@ -53,12 +62,24 @@ void AVDCharacter::Tick(float DeltaTime)
 	AdjustEyeHeight(DeltaTime);
 	UpdateViewRotation();
 	CheckFocus();
+	UpdateTriggerCapsule();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void AVDCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor->ActorHasTag("PushCharacter"))
+	{
+		// Minor hack to resolve penetration against moving objects
+		FHitResult HitResult;
+		GetMovementComponent()->SafeMoveUpdatedComponent(OtherActor->GetVelocity() * 0.01f, GetActorRotation(), true, HitResult);
+	}
 }
 
 
@@ -252,5 +273,15 @@ void AVDCharacter::CheckFocus()
 				}
 			}
 		}
+	}
+}
+
+void AVDCharacter::UpdateTriggerCapsule()
+{
+	UCapsuleComponent* RegularCapsule = GetCapsuleComponent();
+
+	if (TriggerCapsule != nullptr && RegularCapsule != nullptr)
+	{
+		TriggerCapsule->SetCapsuleSize(RegularCapsule->GetUnscaledCapsuleRadius(), RegularCapsule->GetUnscaledCapsuleHalfHeight());
 	}
 }
