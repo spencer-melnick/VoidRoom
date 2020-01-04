@@ -65,7 +65,6 @@ void AVDCharacter::Tick(float DeltaTime)
 	UpdateViewRotation();
 	CheckFocus();
 	UpdateTriggerCapsule();
-	CheckForClimbableLedge();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -289,7 +288,7 @@ void AVDCharacter::UpdateTriggerCapsule()
 	}
 }
 
-bool AVDCharacter::CheckForClimbableLedge()
+bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 {
 	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
 
@@ -351,6 +350,8 @@ bool AVDCharacter::CheckForClimbableLedge()
 				// Debug draw where the player can stand
 				DrawDebugCapsule(GetWorld(), LedgeHitResult.Location, CrouchingShape.Capsule.HalfHeight, 
 					CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Blue, false, 0.1f);
+
+				NewLocation = LedgeHitResult.Location;
 
 				return true;
 			}
