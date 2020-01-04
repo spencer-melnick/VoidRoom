@@ -4,17 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "VoidRoomGameModeBase.generated.h"
-
+#include "VDGameMode.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class VOIDROOM_API AVoidRoomGameModeBase : public AGameModeBase
+class VOIDROOM_API AVDGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
-
-	virtual void StartPlay() override;
-
+	
 };

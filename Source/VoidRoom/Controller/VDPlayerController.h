@@ -4,20 +4,23 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "VoidPlayerController.generated.h"
+#include "VDPlayerController.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class VOIDROOM_API AVoidPlayerController : public APlayerController
+class VOIDROOM_API AVDPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
 public:
-	AVoidPlayerController();
+	// Override public interface
+	virtual void SetupInputComponent() override;
 
-private:
+protected:
+	// VD protected interface
+
 	void MoveForward(float Scale);
 	void MoveRight(float Scale);
 
@@ -26,7 +29,7 @@ private:
 
 	void Crouch();
 	void UnCrouch();
+
+	void Interact();
 	
-public:
-	virtual void SetupInputComponent() override;
 };
