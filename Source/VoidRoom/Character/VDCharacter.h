@@ -65,7 +65,7 @@ protected:
 	void UpdateViewRotation();
 	void CheckFocus();
 	void UpdateTriggerCapsule();
-	bool CheckForClimbableLedge();
+	bool CheckForClimbableLedge(FVector& NewLocation);
 
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
