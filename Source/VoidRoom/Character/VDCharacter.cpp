@@ -11,13 +11,11 @@
 #include "../VoidRoom.h"
 #include "../Gameplay/InteractableComponent.h"
 
-AVDCharacter::AVDCharacter()
+AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVDCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
  	// Set this character to call Tick() every frame
 	PrimaryActorTick.bCanEverTick = true;
-
-	// Set starting eye height
-	EyeHeightFromGround = GetDefaultHalfHeight() + BaseEyeHeight;
 
 	// Spawn view attachment
 	ViewAttachment = CreateDefaultSubobject<USceneComponent>(TEXT("ViewAttachment"));
@@ -60,8 +58,7 @@ void AVDCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	CheckCrouch();
-	AdjustEyeHeight(DeltaTime);
+	AdjustEyeHeight();
 	UpdateViewRotation();
 	CheckFocus();
 	UpdateTriggerCapsule();
@@ -86,7 +83,7 @@ void AVDCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 
 
 
-// VD interface
+// VD public interface
 
 USceneComponent* AVDCharacter::GetViewAttachment() const
 {
@@ -98,14 +95,9 @@ UCameraComponent* AVDCharacter::GetFirstPersonCamera() const
 	return FirstPersonCamera;
 }
 
-float AVDCharacter::GetCurrentEyeHeightFromCenter() const
+UVDCharacterMovementComponent* AVDCharacter::GetCharacterMovementComponent() const
 {
-	return GetCurrentEyeHeightFromGround() - GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-}
-
-float AVDCharacter::GetCurrentEyeHeightFromGround() const
-{
-	return EyeHeightFromGround;
+	return CharacterMovementComponent;
 }
 
 FVector AVDCharacter::GetViewLocation() const
@@ -122,17 +114,17 @@ AActor* AVDCharacter::GetFocusedActor() const
 
 void AVDCharacter::StartCrouch()
 {
-	bAttemptingCrouch = true;
+	CharacterMovementComponent->bWantsToCrouch = true;
 }
 
 void AVDCharacter::StartUncrouch()
 {
-	bAttemptingCrouch = false;
+	CharacterMovementComponent->bWantsToCrouch = false;
 }
 
 void AVDCharacter::ToggleCrouch()
 {
-	bAttemptingCrouch = !bAttemptingCrouch;
+	CharacterMovementComponent->bWantsToCrouch = !CharacterMovementComponent->bWantsToCrouch;
 }
 
 void AVDCharacter::Interact()
@@ -161,63 +153,21 @@ void AVDCharacter::BeginPlay()
 	
 }
 
+void AVDCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	CharacterMovementComponent = Cast<UVDCharacterMovementComponent>(GetMovementComponent());
+}
+
 
 // VD protected interface
 
-void AVDCharacter::CheckCrouch()
+void AVDCharacter::AdjustEyeHeight()
 {
-	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
-	if (MovementComponent == nullptr) {
-		UE_LOG(LogVD, Warning, TEXT("VDCharacter %s does not have a character movement component"), *GetNameSafe(this));
-		return;
-	}
-
-	float CrouchedEyeHeightFromGround = CrouchedEyeHeight + MovementComponent->CrouchedHalfHeight;
-
-	// If our animation has completed (camera height = desired crouched eye height)
-	// notify the movement component to change capsule height
-	if (GetCurrentEyeHeightFromGround() == CrouchedEyeHeightFromGround && !bIsCrouched && bAttemptingCrouch)
-	{
-		Crouch();
-	}
-	// If we're currently crouched, and stopped attempting for any reason, notify
-	// the movement component to reset capsule height
-	else if (bIsCrouched && !bAttemptingCrouch)
-	{
-		UnCrouch();
-	}
-}
-
-void AVDCharacter::AdjustEyeHeight(float DeltaTime)
-{
-	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
-
-	if (MovementComponent == nullptr)
-	{
-		UE_LOG(LogVD, Warning, TEXT("VDCharacter %s does not have a character movement component"), *GetNameSafe(this));
-		return;
-	}
-
-	float StandingHalfHeight = GetDefaultHalfHeight();
-	float CrouchedHalfHeight = MovementComponent->CrouchedHalfHeight;
-
-	if (bAttemptingCrouch || bIsCrouched)
-	{
-		// Figure out the limits of the camera height (from the ground) using the final crouched height
-		float CrouchedEyeHeightFromGround = MovementComponent->CrouchedHalfHeight + CrouchedEyeHeight;
-		EyeHeightFromGround -= CrouchSpeed * DeltaTime;
-		EyeHeightFromGround = FMath::Max<float>(EyeHeightFromGround, CrouchedEyeHeightFromGround);
-	}
-	else
-	{
-		// Figure out the limits of the camera height (from the ground) using the default height
-		float StandingEyeHeightFromGround = StandingHalfHeight + BaseEyeHeight;
-		EyeHeightFromGround += CrouchSpeed * DeltaTime;
-		EyeHeightFromGround = FMath::Min<float>(EyeHeightFromGround, StandingEyeHeightFromGround);
-	}
-
-	// Set camera height relative to ground using current capsule half height
-	GetViewAttachment()->SetRelativeLocation(FVector::UpVector * GetCurrentEyeHeightFromCenter());
+	float TopHeight = CharacterMovementComponent->GetCurrentHalfHeight();
+	float EyeHeight = TopHeight - HeadToEyeHeight;
+	GetViewAttachment()->SetRelativeLocation(FVector::UpVector * EyeHeight);
 }
 
 void AVDCharacter::UpdateViewRotation()
@@ -290,12 +240,10 @@ void AVDCharacter::UpdateTriggerCapsule()
 
 bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 {
-	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
-
 	// Create collision shapes for the current state, and one explicitly for a crouching character
 	FCollisionShape RegularShape = TriggerCapsule->GetCollisionShape();
 	FCollisionShape CrouchingShape = RegularShape;
-	CrouchingShape.Capsule.HalfHeight = MovementComponent->CrouchedHalfHeight;
+	CrouchingShape.Capsule.HalfHeight = GetCharacterMovementComponent()->CrouchedHalfHeight;
 	float RegularHalfHeight = RegularShape.Capsule.HalfHeight + RegularShape.Capsule.Radius;
 	float CrouchingHalfHeight = CrouchingShape.Capsule.HalfHeight + CrouchingShape.Capsule.Radius;
 

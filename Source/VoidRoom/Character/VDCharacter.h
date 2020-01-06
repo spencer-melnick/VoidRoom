@@ -5,6 +5,9 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+
+#include "VDCharacterMovementComponent.h"
+
 #include "VDCharacter.generated.h"
 
 UCLASS()
@@ -13,12 +16,13 @@ class VOIDROOM_API AVDCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	AVDCharacter();
+	AVDCharacter(const FObjectInitializer& ObjectInitializer);
 
-	// Engine events
+	// Public engine overrides
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Bound events
 	UFUNCTION()
 	virtual void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -27,6 +31,7 @@ public:
 	// VD interfaces
 	USceneComponent* GetViewAttachment() const;
 	UCameraComponent* GetFirstPersonCamera() const;
+	UVDCharacterMovementComponent* GetCharacterMovementComponent() const;
 	float GetCurrentEyeHeightFromCenter() const;
 	float GetCurrentEyeHeightFromGround() const;
 	FVector GetViewLocation() const;
@@ -41,6 +46,8 @@ public:
 	// Editor properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
+	float HeadToEyeHeight = 0.2f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float MaxFocusDistance = 500.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
@@ -57,23 +64,27 @@ public:
 	float ClimbForwardDistance = 20.f;
 
 protected:
+	// Protected engine overrides
 	virtual void BeginPlay() override;
+	virtual void PostInitializeComponents() override;
 
 	// Helper functions
-	void CheckCrouch();
-	void AdjustEyeHeight(float DeltaTime);
+	void AdjustEyeHeight();
 	void UpdateViewRotation();
 	void CheckFocus();
 	void UpdateTriggerCapsule();
 	bool CheckForClimbableLedge(FVector& NewLocation);
 
+private:
+	// Attached components
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
 	UCapsuleComponent* TriggerCapsule;
-	float EyeHeightFromGround;
-	bool bAttemptingCrouch = false;
 
+	// Cached component casts
+	UVDCharacterMovementComponent* CharacterMovementComponent;
 
+	// Normal operating variables
 	// UPROPERTY(Replicated)
 	AActor* FocusedActor = nullptr;
 };
