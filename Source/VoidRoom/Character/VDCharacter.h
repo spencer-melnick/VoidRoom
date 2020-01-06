@@ -47,7 +47,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
-	float HeadToEyeHeight = 0.2f;
+	float HeadToEyeHeight = 20.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float MaxFocusDistance = 500.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)

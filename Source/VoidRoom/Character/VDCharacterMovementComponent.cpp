@@ -5,6 +5,7 @@
 
 #include "GameFramework/Character.h"
 #include "Components/CapsuleComponent.h"
+#include "DrawDebugHelpers.h"
 
 #include "../VoidRoom.h"
 #include "VDCharacter.h"
@@ -118,7 +119,7 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
 
     // Calculate some information about the potential new capsule
     float NewHalfHeight = UKismetMathLibrary::Ease(VoidCharacterOwner->GetDefaultHalfHeight(), CrouchedHalfHeight, NewEaseAlpha, CrouchEaseFunction);
-    FCollisionShape NewCollisionShape = FCollisionShape::MakeCapsule(CurrentCollisionShape.Capsule.Radius, NewHalfHeight - CurrentCollisionShape.Capsule.Radius);
+    FCollisionShape NewCollisionShape = FCollisionShape::MakeCapsule(CurrentCollisionShape.Capsule.Radius, NewHalfHeight);
     FVector NewLocation;
 
     // Right now we just expand from the top of the capsule if we're falling, but this could be changed
