@@ -22,7 +22,7 @@ void UVDCharacterMovementComponent::InitializeComponent()
 {
     VoidCharacterOwner = Cast<AVDCharacter>(GetOwner());
 
-    if (VoidCharacterOwner != nullptr)
+    if (VoidCharacterOwner == nullptr)
     {
         UE_LOG(LogVD, Error, TEXT("UVDCharacterMovementComponent %s is not owned by a VDCharacter"), *GetNameSafe(this));
     }
