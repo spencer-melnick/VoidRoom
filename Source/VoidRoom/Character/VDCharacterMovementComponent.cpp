@@ -31,6 +31,9 @@ void UVDCharacterMovementComponent::InitializeComponent()
 
 void UVDCharacterMovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
+    // Check if we're already overlapping something and try to move out of it
+    CheckInitialOverlap(DeltaSeconds);
+
 	// Check for a change in crouch state. Players toggle crouch by changing bWantsToCrouch.
     UpdateCrouch(false, DeltaSeconds);
 }
@@ -71,6 +74,51 @@ float UVDCharacterMovementComponent::GetMaxSpeed() const
 
 // Public interface
 
+void UVDCharacterMovementComponent::CheckInitialOverlap(float DeltaSeconds)
+{
+    // Get our collision test shape
+    UCapsuleComponent* Capsule = VoidCharacterOwner->GetCapsuleComponent();
+    FCollisionShape CollisionShape = Capsule->GetCollisionShape();
+    FVector Location = Capsule->GetComponentLocation();
+
+    // Use default collision test parameters
+    FCollisionQueryParams CapsuleParams(SCENE_QUERY_STAT(CrouchTrace), false, CharacterOwner);
+    FCollisionResponseParams ResponseParam;
+    InitCollisionParams(CapsuleParams, ResponseParam);
+
+    TArray<FOverlapResult> Overlaps;
+
+    bool bEncroached = GetWorld()->OverlapMultiByChannel(Overlaps, Location, FQuat::Identity,
+        UpdatedComponent->GetCollisionObjectType(), CollisionShape, CapsuleParams, ResponseParam);
+
+    if (bEncroached)
+    {
+        for (auto i : Overlaps)
+        {
+            // Only resolve against actors that are tagged
+            if (i.bBlockingHit && i.GetActor()->ActorHasTag("PushCharacter"))
+            {
+                // Get shape of overlapping component
+                FCollisionShape OverlappingShape = i.GetComponent()->GetCollisionShape();
+                FVector OverlappingLocation = i.GetComponent()->GetComponentLocation();
+                FQuat OverlappingQuat = i.GetComponent()->GetComponentQuat();
+
+                // Try to calculate penetration resolution
+                FMTDResult PenetrationResolve;
+                
+                if (Capsule->ComputePenetration(PenetrationResolve, OverlappingShape, OverlappingLocation, OverlappingQuat))
+                {
+                    FVector Movement = PenetrationResolve.Direction * PenetrationResolve.Distance;
+                    FHitResult HitResult;
+
+                    // Do a simple move to try and resolve
+                    SafeMoveUpdatedComponent(Movement, UpdatedComponent->GetComponentRotation(), true, HitResult);
+                }
+            }
+        }
+    }
+}
+
 void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float DeltaSeconds)
 {
 	if (!HasValidData())
@@ -79,14 +127,6 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
 	}
 
     bool bShouldCrouch = bWantsToCrouch && CanCrouchInCurrentState();
-
-	// if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
-	// {
-	// 	// restore collision size before crouching
-	// 	ACharacter* DefaultCharacter = CharacterOwner->GetClass()->GetDefaultObject<ACharacter>();
-	// 	VoidCharacterOwner->GetCapsuleComponent()->SetCapsuleSize(DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), DefaultCharacter->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight());
-	// 	bShrinkProxyCapsule = true;
-	// }
 
     // Accumulate time in our ease function
     float DeltaEaseAlpha = DeltaSeconds / CrouchEaseTime;

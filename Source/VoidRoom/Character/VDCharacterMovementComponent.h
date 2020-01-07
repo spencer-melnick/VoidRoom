@@ -32,6 +32,7 @@ public:
 	virtual float GetMaxSpeed() const override;
 	
 	// Public interface
+	void CheckInitialOverlap(float DeltaSeconds);
 	void UpdateCrouch(bool bClientSimulation, float DeltaSeconds);
 	float GetCurrentHalfHeight() const;
 	float GetCurrentHeight() const;

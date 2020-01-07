@@ -73,12 +73,7 @@ void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 void AVDCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("PushCharacter"))
-	{
-		// Minor hack to resolve penetration against moving objects
-		FHitResult HitResult;
-		GetMovementComponent()->SafeMoveUpdatedComponent(OtherActor->GetVelocity() * 0.01f, GetActorRotation(), true, HitResult);
-	}
+
 }
 
 
