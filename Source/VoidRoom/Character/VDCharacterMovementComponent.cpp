@@ -111,6 +111,11 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
         return;
     }
 
+    if (bClientSimulation && VoidCharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
+    {
+        bShrinkProxyCapsule = true;
+    }
+
     // Get some information about the current capsule
     UCapsuleComponent* Capsule = VoidCharacterOwner->GetCapsuleComponent();
     float CurrentHalfHeight = GetCurrentHalfHeight();
@@ -135,6 +140,8 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
         FVector BottomLocation = CurrentLocation + FVector::DownVector * CurrentHalfHeight;
         NewLocation = BottomLocation + FVector::UpVector * NewHalfHeight;
     }
+
+    float HeightChange = NewLocation.Z - CurrentLocation.Z;
 
     if (!bClientSimulation)
     {
@@ -192,19 +199,16 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
 
 	AdjustProxyCapsuleSize();
 
-
-	// CharacterOwner->OnStartCrouch( HalfHeightAdjust, ScaledHalfHeightAdjust );
-
-	// // Don't smooth this change in mesh position
-	// if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
-	// {
-	// 	FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
-	// 	if (ClientData && ClientData->MeshTranslationOffset.Z != 0.f)
-	// 	{
-	// 		ClientData->MeshTranslationOffset -= FVector(0.f, 0.f, MeshAdjust);
-	// 		ClientData->OriginalMeshTranslationOffset = ClientData->MeshTranslationOffset;
-	// 	}
-	// }
+	// Don't smooth this change in mesh position
+	if (bClientSimulation && CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy)
+	{
+		FNetworkPredictionData_Client_Character* ClientData = GetPredictionData_Client_Character();
+		if (ClientData && ClientData->MeshTranslationOffset.Z != 0.f)
+		{
+			ClientData->MeshTranslationOffset -= FVector(0.f, 0.f, HeightChange);
+			ClientData->OriginalMeshTranslationOffset = ClientData->MeshTranslationOffset;
+		}
+	}
 }
 
 float UVDCharacterMovementComponent::GetCurrentHalfHeight() const
