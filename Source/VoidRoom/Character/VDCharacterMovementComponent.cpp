@@ -17,6 +17,7 @@ UVDCharacterMovementComponent::UVDCharacterMovementComponent()
 }
 
 
+
 // Public engine overrides
 
 void UVDCharacterMovementComponent::InitializeComponent()
@@ -68,6 +69,44 @@ float UVDCharacterMovementComponent::GetMaxSpeed() const
 	default:
 		return 0.f;
 	}
+}
+
+// Public engine overrides for networked movement
+
+void UVDCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
+{
+    Super::UpdateFromCompressedFlags(Flags);
+
+    // Pull the climb state from the compressed flags
+    bWantsToClimb = (Flags & FSavedMove_Character::FLAG_Custom_0) != 0;
+}
+
+FNetworkPredictionData_Client* UVDCharacterMovementComponent::GetPredictionData_Client() const
+{
+    check(PawnOwner != nullptr);
+    check(PawnOwner->GetLocalRole() < ROLE_Authority);
+
+    if (!ClientPredictionData)
+    {
+        UVDCharacterMovementComponent* MutableThis = const_cast<UVDCharacterMovementComponent*>(this);
+
+        MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_VDCharacter(*this);
+        MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 92.f;
+		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 140.f;
+    }
+
+    return ClientPredictionData;
+}
+
+void UVDCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity)
+{
+    // Check for climbing
+    if (bWantsToClimb)
+    {
+        bWantsToClimb = false;
+
+        SetMovementMode(MOVE_Custom, MOVE_Climb);
+    }
 }
 
 
@@ -259,4 +298,119 @@ float UVDCharacterMovementComponent::GetCurrentHalfHeight() const
 float UVDCharacterMovementComponent::GetCurrentHeight() const
 {
     return GetCurrentHalfHeight() * 2.f;
+}
+
+void UVDCharacterMovementComponent::ClimbLedge(FVector InitialPosition, FVector WallPosition, FVector LedgePosition)
+{
+    if (PawnOwner->IsLocallyControlled())
+    {
+        // Set local values
+        ClimbInitialPosition = InitialPosition;
+        ClimbWallPosition = WallPosition;
+        ClimbLedgePosition = LedgePosition;
+
+        // Replicate to server
+        ServerClimbLedge(InitialPosition, WallPosition, LedgePosition);
+    }
+
+    // Notify about a new movement
+    bWantsToClimb = true;
+}
+
+bool UVDCharacterMovementComponent::ServerClimbLedge_Validate(const FVector InitialPosition, const FVector WallPosition, const FVector LedgePosition)
+{
+    // TODO: Check if the positions for this ledge climb are reasonable (no players climbing randomly through objects, 1000m up, etc.)
+    return true;
+}
+
+void UVDCharacterMovementComponent::ServerClimbLedge_Implementation(const FVector InitialPosition, const FVector WallPosition, const FVector LedgePosition)
+{
+    // Save the ledge climb points we've received from the client
+    ClimbInitialPosition = InitialPosition;
+    ClimbWallPosition = WallPosition;
+    ClimbLedgePosition = LedgePosition;
+}
+
+
+// Networked saved moves
+
+void FSavedMove_VDCharacter::Clear()
+{
+    Super::Clear();
+
+    // Rest climb data
+    bSavedWantsToClimb = false;
+    SavedClimbInitialPosition = FVector::ZeroVector;
+    SavedClimbWallPosition = FVector::ZeroVector;
+    SavedClimbLedgePosition = FVector::ZeroVector;
+}
+
+void FSavedMove_VDCharacter::SetMoveFor(ACharacter* Character, float InDeltaTime, const FVector& NewAccel,
+    FNetworkPredictionData_Client_Character& ClientData)
+{
+    Super::SetMoveFor(Character, InDeltaTime, NewAccel, ClientData);
+
+    UVDCharacterMovementComponent* CharacterMovement = Cast<UVDCharacterMovementComponent>(Character->GetCharacterMovement());
+    if (CharacterMovement != nullptr)
+    {
+        // Populate saved move data with character movement data
+
+        // Ledge climb data
+        bSavedWantsToClimb = CharacterMovement->bWantsToClimb;
+        SavedClimbInitialPosition = CharacterMovement->ClimbInitialPosition;
+        SavedClimbWallPosition = CharacterMovement->ClimbWallPosition;
+        SavedClimbLedgePosition = CharacterMovement->ClimbLedgePosition;
+    }
+}
+
+uint8 FSavedMove_VDCharacter::GetCompressedFlags() const
+{
+    uint8 Result = Super::GetCompressedFlags();
+
+    // Compress climb flag into single byte
+    if (bSavedWantsToClimb)
+    {
+        Result |= FLAG_Custom_0;
+    }
+
+    return Result;
+}
+
+bool FSavedMove_VDCharacter::CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* Character, float MaxDelta) const
+{
+    // Only moves that have the same climb state can be combined
+    if (bSavedWantsToClimb != ((FSavedMove_VDCharacter*)&NewMove)->bSavedWantsToClimb)
+    {
+        return false;
+    }
+
+    return Super::CanCombineWith(NewMove, Character, MaxDelta);
+}
+
+void FSavedMove_VDCharacter::PrepMoveFor(ACharacter* Character)
+{
+    Super::PrepMoveFor(Character);
+
+    UVDCharacterMovementComponent* CharacterMovement = Cast<UVDCharacterMovementComponent>(Character->GetCharacterMovement());
+    if (CharacterMovement != nullptr)
+    {
+        // Populate character movement data with saved movement data
+
+        // Ledge climb data
+        CharacterMovement->bWantsToClimb = bSavedWantsToClimb;
+        CharacterMovement->ClimbInitialPosition = SavedClimbInitialPosition;
+        CharacterMovement->ClimbWallPosition = SavedClimbWallPosition;
+        CharacterMovement->ClimbLedgePosition = SavedClimbLedgePosition;
+    }
+}
+
+FNetworkPredictionData_Client_VDCharacter::FNetworkPredictionData_Client_VDCharacter(const UVDCharacterMovementComponent& MovementComponent)
+    : Super(MovementComponent)
+{
+    
+}
+
+FSavedMovePtr FNetworkPredictionData_Client_VDCharacter::AllocateNewMove()
+{
+    return FSavedMovePtr(new FSavedMove_VDCharacter());
 }

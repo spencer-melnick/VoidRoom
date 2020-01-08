@@ -6,6 +6,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
 
 #include "../VoidRoom.h"
@@ -49,12 +50,21 @@ void AVDCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	UCapsuleComponent* Capsule = GetCapsuleComponent();
-	DrawDebugCapsule(GetWorld(), Capsule->GetComponentLocation(), Capsule->GetScaledCapsuleHalfHeight(),
-		Capsule->GetScaledCapsuleRadius(), FQuat::Identity, FColor::Green);
+
+	if (IsLocallyControlled())
+	{
+		// Only check focus on controlled characters
+		CheckFocus();
+	}
+	else
+	{
+		// Draw a debug capsule for other characters
+		DrawDebugCapsule(GetWorld(), Capsule->GetComponentLocation(), Capsule->GetScaledCapsuleHalfHeight(),
+			Capsule->GetScaledCapsuleRadius(), FQuat::Identity, FColor::Green);
+	}
 
 	AdjustEyeHeight();
 	UpdateViewRotation();
-	CheckFocus();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

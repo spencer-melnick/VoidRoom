@@ -18,7 +18,6 @@ class VOIDROOM_API UGenericToggleComponent : public UInteractableComponent
 public:
 	// Engine events
 	virtual void BeginPlay() override;
-	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 
 	// VoidRoom events
 	virtual void OnInteract(AVDCharacter* Character) override;

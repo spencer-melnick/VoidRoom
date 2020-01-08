@@ -14,8 +14,7 @@
 
 void UInteractableComponent::OnFocused(AVDCharacter* Character)
 {
-	APlayerController* Controller = Cast<APlayerController>(Character->GetController());
-	if (Controller != nullptr && Controller->IsLocalController())
+	if (Character->IsLocallyControlled())
 	{
 		ShowHighlight();
 	}
@@ -23,8 +22,7 @@ void UInteractableComponent::OnFocused(AVDCharacter* Character)
 
 void UInteractableComponent::OnUnfocused(AVDCharacter* Character)
 {
-	APlayerController* Controller = Cast<APlayerController>(Character->GetController());
-	if (Controller != nullptr && Controller->IsLocalController())
+	if (Character->IsLocallyControlled())
 	{
 		HideHighlight();
 	}

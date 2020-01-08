@@ -28,20 +28,6 @@ void UGenericToggleComponent::BeginPlay()
     SeekStartOrEnd(bIsToggled);
 }
 
-void UGenericToggleComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
-{
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-
-    // if (PropertyChangedEvent.Property->GetNameCPP() == "bIsToggled")
-    // {
-    //     // Only try to use the sequence player if the game is running
-    //     if (bIsPlaying)
-    //     {
-    //         UpdateSequence();
-    //     }
-    // }
-}
-
 void UGenericToggleComponent::OnInteract(AVDCharacter* Character)
 {
     // Flip toggle state
