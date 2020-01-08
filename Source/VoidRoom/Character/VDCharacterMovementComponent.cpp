@@ -83,9 +83,6 @@ void UVDCharacterMovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 
 FNetworkPredictionData_Client* UVDCharacterMovementComponent::GetPredictionData_Client() const
 {
-    check(PawnOwner != nullptr);
-    check(PawnOwner->GetLocalRole() < ROLE_Authority);
-
     if (!ClientPredictionData)
     {
         UVDCharacterMovementComponent* MutableThis = const_cast<UVDCharacterMovementComponent*>(this);
