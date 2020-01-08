@@ -39,16 +39,6 @@ AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 		MovementComponent->bCanWalkOffLedges = true;
 		MovementComponent->bCanWalkOffLedgesWhenCrouching = true;
 	}
-
-	// Setup overlap events
-	// Use a duplicate of our character capsule for overlap events
-	TriggerCapsule = CreateDefaultSubobject<UCapsuleComponent>("TriggerCapsule");
-	TriggerCapsule->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-	TriggerCapsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	TriggerCapsule->SetCollisionProfileName("Trigger");
-	TriggerCapsule->SetGenerateOverlapEvents(true);
-	TriggerCapsule->OnComponentBeginOverlap.AddDynamic(this, &AVDCharacter::OnBeginOverlap);
-	UpdateTriggerCapsule();
 }
 
 
@@ -58,10 +48,13 @@ void AVDCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	DrawDebugCapsule(GetWorld(), Capsule->GetComponentLocation(), Capsule->GetScaledCapsuleHalfHeight(),
+		Capsule->GetScaledCapsuleRadius(), FQuat::Identity, FColor::Green);
+
 	AdjustEyeHeight();
 	UpdateViewRotation();
 	CheckFocus();
-	UpdateTriggerCapsule();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -200,7 +193,7 @@ void AVDCharacter::CheckFocus()
 			{
 				if (i != nullptr)
 				{
-					i->OnUnfocused();
+					i->OnUnfocused(this);
 				}
 			}
 		}
@@ -216,27 +209,17 @@ void AVDCharacter::CheckFocus()
 			{
 				if (i != nullptr)
 				{
-					i->OnFocused();
+					i->OnFocused(this);
 				}
 			}
 		}
 	}
 }
 
-void AVDCharacter::UpdateTriggerCapsule()
-{
-	UCapsuleComponent* RegularCapsule = GetCapsuleComponent();
-
-	if (TriggerCapsule != nullptr && RegularCapsule != nullptr)
-	{
-		TriggerCapsule->SetCapsuleSize(RegularCapsule->GetUnscaledCapsuleRadius(), RegularCapsule->GetUnscaledCapsuleHalfHeight());
-	}
-}
-
 bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 {
 	// Create collision shapes for the current state, and one explicitly for a crouching character
-	FCollisionShape RegularShape = TriggerCapsule->GetCollisionShape();
+	FCollisionShape RegularShape = GetCapsuleComponent()->GetCollisionShape();
 	FCollisionShape CrouchingShape = RegularShape;
 	CrouchingShape.Capsule.HalfHeight = GetCharacterMovementComponent()->CrouchedHalfHeight;
 	float RegularHalfHeight = RegularShape.Capsule.HalfHeight + RegularShape.Capsule.Radius;

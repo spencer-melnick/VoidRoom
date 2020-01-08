@@ -30,6 +30,11 @@ public:
 	virtual void Crouch(bool bClientSimulation) override;
 	virtual void UnCrouch(bool bClientSimulation) override;
 	virtual float GetMaxSpeed() const override;
+
+	// // Engine overrides for networked movement
+	// virtual void UpdateFromCompressedFlags(uint8 Flags) override;
+	// virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
+	// virtual void OnMovementUpdated(float DeltaTime, const FVector& OldLocation, const FVector& OldVelocity) override;
 	
 	// Public interface
 	void CheckInitialOverlap(float DeltaSeconds);
@@ -48,3 +53,28 @@ private:
 	// Private properties
 	float CrouchEaseAlpha = 0.f;
 };
+
+
+// // Custom saved moves
+// class VOIDROOM_API FSavedMove_VDCharacter: public FSavedMove_Character
+// {
+// public:
+// 	virtual bool NeedsRotationSent() const;
+
+// 	virtual void Clear() override;
+// 	virtual void SetMoveFor(ACharacter* Character, float InDeltaTime, const FVector& NewAccel,
+// 		FNetworkPredictionData_Client_Character& ClientData) override;
+// 	virtual uint8 GetCompressedFlags() const override;
+// 	virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* Character, float MaxDelta) const override;
+// 	virtual bool IsImportantMove(const FSavedMovePtr& LastAckedMove) const override;
+// 	virtual bool IsCriticalMove(const FSavedMovePtr& LastAckedMove) const;
+// 	virtual void PostUpdate(ACharacter* C, EPostUpdateMode PostUpdateMode) override;
+// 	virtual void PrepMoveFor(ACharacter* C) override;
+// };
+
+// class VOIDROOM_API FNetworkPredictionData_Client_VDCharacter: public FNetworkPredictionData_Client_Character
+// {
+// public:
+// 	/** Allocate a new saved move. Subclasses should override this if they want to use a custom move class. */
+// 	virtual FSavedMovePtr AllocateNewMove() override;
+// };

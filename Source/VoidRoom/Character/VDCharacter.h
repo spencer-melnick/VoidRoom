@@ -79,7 +79,6 @@ private:
 	// Attached components
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
-	UCapsuleComponent* TriggerCapsule;
 
 	// Cached component casts
 	UVDCharacterMovementComponent* CharacterMovementComponent;
