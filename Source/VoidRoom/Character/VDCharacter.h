@@ -42,6 +42,7 @@ public:
 	void ToggleCrouch();
 
 	void Interact();
+	void TryClimbLedge();
 
 	// Editor properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
@@ -73,7 +74,7 @@ protected:
 	void UpdateViewRotation();
 	void CheckFocus();
 	void UpdateTriggerCapsule();
-	bool CheckForClimbableLedge(FVector& NewLocation);
+	bool CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation);
 
 private:
 	// Attached components

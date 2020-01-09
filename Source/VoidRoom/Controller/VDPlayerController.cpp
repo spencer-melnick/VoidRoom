@@ -26,6 +26,7 @@ void AVDPlayerController::SetupInputComponent()
     InputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &AVDPlayerController::Crouch);
     InputComponent->BindAction("Crouch", EInputEvent::IE_Released, this, &AVDPlayerController::UnCrouch);
     InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
+    InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
 }
 
 
@@ -79,5 +80,15 @@ void AVDPlayerController::Interact()
     if (PossessedPawn)
     {
         PossessedPawn->Interact();
+    }
+}
+
+void AVDPlayerController::Climb()
+{
+    AVDCharacter* PossessedPawn = Cast<AVDCharacter>(GetPawn());
+
+    if (PossessedPawn != nullptr)
+    {
+        PossessedPawn->TryClimbLedge();
     }
 }

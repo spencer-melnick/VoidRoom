@@ -102,9 +102,83 @@ void UVDCharacterMovementComponent::OnMovementUpdated(float DeltaTime, const FVe
     {
         bWantsToClimb = false;
 
+        // The intermediate position is where the character is just teetering on the ledge
+        FVector IntermediatePosition = FVector(ClimbWallPosition.X, ClimbWallPosition.Y, ClimbLedgePosition.Z);
+
+        // Create a curve for the climb
+        ClimbCurve.Reset();
+        ClimbCurve.AddPoint(0.f, ClimbInitialPosition);
+        ClimbCurve.AddPoint(0.7f, IntermediatePosition);
+        ClimbCurve.AddPoint(1.f, ClimbLedgePosition);
+
+        // Reset our ease function
+        ClimbEaseAlpha = 0.f;
+
+        // Set the movement mode
         SetMovementMode(MOVE_Custom, MOVE_Climb);
     }
 }
+
+void UVDCharacterMovementComponent::StartNewPhysics(float deltaTime, int32 Iterations)
+{
+	if ((deltaTime < MIN_TICK_TIME) || (Iterations >= MaxSimulationIterations) || !HasValidData())
+	{
+		return;
+	}
+
+	if (UpdatedComponent->IsSimulatingPhysics())
+	{
+		UE_LOG(LogVD, Warning, TEXT("UCharacterMovementComponent::StartNewPhysics: UpdateComponent (%s) is simulating physics - aborting."), *UpdatedComponent->GetPathName());
+		return;
+	}
+
+	const bool bSavedMovementInProgress = bMovementInProgress;
+	bMovementInProgress = true;
+
+	switch ( MovementMode )
+	{
+	case MOVE_None:
+		break;
+	case MOVE_Walking:
+		PhysWalking(deltaTime, Iterations);
+		break;
+	case MOVE_NavWalking:
+		PhysNavWalking(deltaTime, Iterations);
+		break;
+	case MOVE_Falling:
+		PhysFalling(deltaTime, Iterations);
+		break;
+	case MOVE_Flying:
+		PhysFlying(deltaTime, Iterations);
+		break;
+	case MOVE_Swimming:
+		PhysSwimming(deltaTime, Iterations);
+		break;
+	case MOVE_Custom:
+		switch (CustomMovementMode)
+        {
+            case MOVE_Climb:
+                PhysClimbing(deltaTime, Iterations);
+                break;
+            default:
+                UE_LOG(LogVD, Warning, TEXT("%s has unsupported custom movement mode %d"), *CharacterOwner->GetName(), CustomMovementMode);
+		        SetMovementMode(MOVE_None);
+                break;
+        }
+        break;
+	default:
+		UE_LOG(LogVD, Warning, TEXT("%s has unsupported movement mode %d"), *CharacterOwner->GetName(), int32(MovementMode));
+		SetMovementMode(MOVE_None);
+		break;
+	}
+
+	bMovementInProgress = bSavedMovementInProgress;
+	if ( bDeferUpdateMoveComponent )
+	{
+		SetUpdatedComponent(DeferredUpdatedMoveComponent);
+	}
+}
+
 
 
 
@@ -132,7 +206,7 @@ void UVDCharacterMovementComponent::CheckInitialOverlap(float DeltaSeconds)
         for (auto i : Overlaps)
         {
             // Only resolve against actors that are tagged
-            if (i.bBlockingHit && i.GetActor()->ActorHasTag("PushCharacter"))
+            if (i.bBlockingHit && i.GetActor() != nullptr && i.GetActor()->ActorHasTag("PushCharacter"))
             {
                 // Get shape of overlapping component
                 FCollisionShape OverlappingShape = i.GetComponent()->GetCollisionShape();
@@ -162,7 +236,8 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
 		return;
 	}
 
-    bool bShouldCrouch = bWantsToCrouch && CanCrouchInCurrentState();
+    // Force a crouch when climbing
+    bool bShouldCrouch = (bWantsToCrouch && CanCrouchInCurrentState()) || IsClimbing();
 
     // Accumulate time in our ease function
     float DeltaEaseAlpha = DeltaSeconds / CrouchEaseTime;
@@ -297,6 +372,11 @@ float UVDCharacterMovementComponent::GetCurrentHeight() const
     return GetCurrentHalfHeight() * 2.f;
 }
 
+bool UVDCharacterMovementComponent::IsClimbing() const
+{
+    return MovementMode == MOVE_Custom && CustomMovementMode == MOVE_Climb;
+}
+
 void UVDCharacterMovementComponent::ClimbLedge(FVector InitialPosition, FVector WallPosition, FVector LedgePosition)
 {
     if (PawnOwner->IsLocallyControlled())
@@ -312,6 +392,56 @@ void UVDCharacterMovementComponent::ClimbLedge(FVector InitialPosition, FVector 
 
     // Notify about a new movement
     bWantsToClimb = true;
+}
+
+
+// Custom movement modes
+
+void UVDCharacterMovementComponent::PhysClimbing(float deltaTime, int32 Iterations)
+{
+    if (deltaTime < MIN_TICK_TIME)
+	{
+		return;
+	}
+
+	// RestorePreAdditiveRootMotionVelocity();
+	// ApplyRootMotionToVelocity(deltaTime);
+
+	Iterations++;
+	bJustTeleported = false;
+
+    // Accumulate time in our ease function
+    float DeltaEaseAlpha = deltaTime / ClimbEaseTime;
+    float NewEaseAlpha = ClimbEaseAlpha + DeltaEaseAlpha;
+
+    bool bRunNewPhys = false;
+    float RemainingTime = 0.f;
+
+    if (NewEaseAlpha >= 1.f)
+    {
+        // Try to run a new physics step next if we're done
+        bRunNewPhys = true;
+
+        float OverflowAlpha = NewEaseAlpha - 1.f;
+        RemainingTime = OverflowAlpha * ClimbEaseTime;
+        NewEaseAlpha = 1.f;
+    }
+
+    ClimbEaseAlpha = NewEaseAlpha;
+    float CurveAlpha = UKismetMathLibrary::Ease(0.f, 1.f, ClimbEaseAlpha, ClimbEaseFunction);
+
+	FVector OldLocation = UpdatedComponent->GetComponentLocation();
+	FVector NewLocation = ClimbCurve.Eval(CurveAlpha);
+    FVector Adjusted = NewLocation - OldLocation;
+
+    FHitResult Hit;
+	SafeMoveUpdatedComponent(Adjusted, UpdatedComponent->GetComponentQuat(), false, Hit);
+
+	if (bRunNewPhys)
+    {
+        SetMovementMode(EMovementMode::MOVE_Walking);
+        StartNewPhysics(RemainingTime, Iterations);
+    }
 }
 
 bool UVDCharacterMovementComponent::ServerClimbLedge_Validate(const FVector InitialPosition, const FVector WallPosition, const FVector LedgePosition)

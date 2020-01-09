@@ -142,6 +142,17 @@ void AVDCharacter::Interact()
 	}
 }
 
+void AVDCharacter::TryClimbLedge()
+{
+	FVector WallLocation;
+	FVector LedgeLocation;
+
+	if (CheckForClimbableLedge(WallLocation, LedgeLocation))
+	{
+		CharacterMovementComponent->ClimbLedge(GetActorLocation(), WallLocation, LedgeLocation);
+	}
+}
+
 
 // Overrides of protected interface
 
@@ -226,7 +237,7 @@ void AVDCharacter::CheckFocus()
 	}
 }
 
-bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
+bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation)
 {
 	// Create collision shapes for the current state, and one explicitly for a crouching character
 	FCollisionShape RegularShape = GetCapsuleComponent()->GetCollisionShape();
@@ -251,6 +262,8 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 	if (GetWorld()->SweepSingleByChannel(WallHitResult, WallTraceStart, WallTraceEnd, FQuat::Identity,
 		ECollisionChannel::ECC_Pawn, RegularShape, TraceParams))
 	{
+		WallLocation = WallHitResult.Location;
+
 		// Get offset along floor plane
 		FVector FloorLocation = WallHitResult.ImpactPoint - WallHitResult.ImpactNormal * ClimbForwardDistance;
 		FloorLocation.Z = 0.f;
@@ -287,7 +300,7 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 				DrawDebugCapsule(GetWorld(), LedgeHitResult.Location, CrouchingShape.Capsule.HalfHeight, 
 					CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Blue, false, 0.1f);
 
-				NewLocation = LedgeHitResult.Location;
+				LedgeLocation = LedgeHitResult.Location;
 
 				return true;
 			}
