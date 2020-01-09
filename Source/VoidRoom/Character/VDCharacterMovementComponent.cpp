@@ -279,7 +279,7 @@ void UVDCharacterMovementComponent::UpdateCrouch(bool bClientSimulation, float D
     FVector NewLocation;
 
     // Right now we just expand from the top of the capsule if we're falling, but this could be changed
-    bool bExpandFromTop = IsFalling();
+    bool bExpandFromTop = IsFalling() || IsClimbing();
 
     if (bExpandFromTop)
     {

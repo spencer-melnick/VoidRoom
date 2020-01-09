@@ -280,26 +280,15 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 		// Trace using character capsule shape
 		FHitResult LedgeHitResult;
 
-		// Debug draw the start of the ledge trace
-		DrawDebugCapsule(GetWorld(), LedgeTraceStart, CrouchingShape.Capsule.HalfHeight,
-			CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Green, false, 0.1f);
-
 		if (GetWorld()->SweepSingleByChannel(LedgeHitResult, LedgeTraceStart, LedgeTraceEnd, FQuat::Identity,
 			ECollisionChannel::ECC_Pawn, CrouchingShape, TraceParams))
 		{
-			// Draw a small sphere on the ledge hit
-			DrawDebugSphere(GetWorld(), LedgeHitResult.ImpactPoint, 1.f, 16, FColor::Red, false, 0.1f);
-
 			// Calculate the angle between a flat plane and the ledge candidate
 			float SlopeDotProduct = FVector::DotProduct(FVector::UpVector, LedgeHitResult.ImpactNormal);
 			float SlopeAngle = FMath::RadiansToDegrees(FMath::Acos(SlopeDotProduct));
 
 			if (!LedgeHitResult.bStartPenetrating && SlopeAngle < MaxLedgeAngle)
 			{
-				// Debug draw where the player can stand
-				DrawDebugCapsule(GetWorld(), LedgeHitResult.Location, CrouchingShape.Capsule.HalfHeight, 
-					CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Blue, false, 0.1f);
-
 				LedgeLocation = LedgeHitResult.Location;
 
 				return true;
