@@ -53,7 +53,7 @@ public:
 	float CrouchEaseTime = 0.25f;
 
 	// Climbing
-	TEnumAsByte<EEasingFunc::Type> ClimbEaseFunction = EEasingFunc::SinusoidalOut;
+	TEnumAsByte<EEasingFunc::Type> ClimbEaseFunction = EEasingFunc::SinusoidalInOut;
 	float ClimbEaseTime = 0.5f;
 
 
