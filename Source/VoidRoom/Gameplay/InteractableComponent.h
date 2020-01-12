@@ -16,8 +16,8 @@ class VOIDROOM_API UInteractableComponent : public UActorComponent
 
 public:	
 	// Used when a character looks at or away from this object
-	virtual void OnFocused();
-	virtual void OnUnfocused();
+	virtual void OnFocused(AVDCharacter* Character);
+	virtual void OnUnfocused(AVDCharacter* Character);
 
 	// Used when a character interacts with this object
 	virtual void OnInteract(AVDCharacter* Character);

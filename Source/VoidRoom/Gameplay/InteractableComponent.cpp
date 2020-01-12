@@ -4,19 +4,28 @@
 #include "InteractableComponent.h"
 
 #include "Components/MeshComponent.h"
+#include "GameFramework/PlayerController.h"
+
+#include "../Character/VDCharacter.h"
 #include "../VoidRoom.h"
 
 
 // VD public interface
 
-void UInteractableComponent::OnFocused()
+void UInteractableComponent::OnFocused(AVDCharacter* Character)
 {
-	ShowHighlight();
+	if (Character->IsLocallyControlled())
+	{
+		ShowHighlight();
+	}
 }
 
-void UInteractableComponent::OnUnfocused()
+void UInteractableComponent::OnUnfocused(AVDCharacter* Character)
 {
-	HideHighlight();
+	if (Character->IsLocallyControlled())
+	{
+		HideHighlight();
+	}
 }
 
 void UInteractableComponent::OnInteract(AVDCharacter* Character)

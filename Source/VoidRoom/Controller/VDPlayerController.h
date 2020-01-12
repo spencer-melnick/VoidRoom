@@ -31,5 +31,5 @@ protected:
 	void UnCrouch();
 
 	void Interact();
-	
+	void Climb();
 };

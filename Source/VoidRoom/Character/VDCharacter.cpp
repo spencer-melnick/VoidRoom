@@ -6,18 +6,17 @@
 #include "Math/UnrealMathUtility.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
 
 #include "../VoidRoom.h"
 #include "../Gameplay/InteractableComponent.h"
 
-AVDCharacter::AVDCharacter()
+AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVDCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
  	// Set this character to call Tick() every frame
 	PrimaryActorTick.bCanEverTick = true;
-
-	// Set starting eye height
-	EyeHeightFromGround = GetDefaultHalfHeight() + BaseEyeHeight;
 
 	// Spawn view attachment
 	ViewAttachment = CreateDefaultSubobject<USceneComponent>(TEXT("ViewAttachment"));
@@ -41,16 +40,6 @@ AVDCharacter::AVDCharacter()
 		MovementComponent->bCanWalkOffLedges = true;
 		MovementComponent->bCanWalkOffLedgesWhenCrouching = true;
 	}
-
-	// Setup overlap events
-	// Use a duplicate of our character capsule for overlap events
-	TriggerCapsule = CreateDefaultSubobject<UCapsuleComponent>("TriggerCapsule");
-	TriggerCapsule->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::KeepRelativeTransform);
-	TriggerCapsule->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	TriggerCapsule->SetCollisionProfileName("Trigger");
-	TriggerCapsule->SetGenerateOverlapEvents(true);
-	TriggerCapsule->OnComponentBeginOverlap.AddDynamic(this, &AVDCharacter::OnBeginOverlap);
-	UpdateTriggerCapsule();
 }
 
 
@@ -60,11 +49,22 @@ void AVDCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	CheckCrouch();
-	AdjustEyeHeight(DeltaTime);
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+
+	if (IsLocallyControlled())
+	{
+		// Only check focus on controlled characters
+		CheckFocus();
+	}
+	else
+	{
+		// Draw a debug capsule for other characters
+		DrawDebugCapsule(GetWorld(), Capsule->GetComponentLocation(), Capsule->GetScaledCapsuleHalfHeight(),
+			Capsule->GetScaledCapsuleRadius(), FQuat::Identity, FColor::Green);
+	}
+
+	AdjustEyeHeight();
 	UpdateViewRotation();
-	CheckFocus();
-	UpdateTriggerCapsule();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -76,17 +76,12 @@ void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 void AVDCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (OtherActor->ActorHasTag("PushCharacter"))
-	{
-		// Minor hack to resolve penetration against moving objects
-		FHitResult HitResult;
-		GetMovementComponent()->SafeMoveUpdatedComponent(OtherActor->GetVelocity() * 0.01f, GetActorRotation(), true, HitResult);
-	}
+
 }
 
 
 
-// VD interface
+// VD public interface
 
 USceneComponent* AVDCharacter::GetViewAttachment() const
 {
@@ -98,14 +93,9 @@ UCameraComponent* AVDCharacter::GetFirstPersonCamera() const
 	return FirstPersonCamera;
 }
 
-float AVDCharacter::GetCurrentEyeHeightFromCenter() const
+UVDCharacterMovementComponent* AVDCharacter::GetCharacterMovementComponent() const
 {
-	return GetCurrentEyeHeightFromGround() - GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
-}
-
-float AVDCharacter::GetCurrentEyeHeightFromGround() const
-{
-	return EyeHeightFromGround;
+	return CharacterMovementComponent;
 }
 
 FVector AVDCharacter::GetViewLocation() const
@@ -122,17 +112,17 @@ AActor* AVDCharacter::GetFocusedActor() const
 
 void AVDCharacter::StartCrouch()
 {
-	bAttemptingCrouch = true;
+	CharacterMovementComponent->bWantsToCrouch = true;
 }
 
 void AVDCharacter::StartUncrouch()
 {
-	bAttemptingCrouch = false;
+	CharacterMovementComponent->bWantsToCrouch = false;
 }
 
 void AVDCharacter::ToggleCrouch()
 {
-	bAttemptingCrouch = !bAttemptingCrouch;
+	CharacterMovementComponent->bWantsToCrouch = !CharacterMovementComponent->bWantsToCrouch;
 }
 
 void AVDCharacter::Interact()
@@ -152,6 +142,17 @@ void AVDCharacter::Interact()
 	}
 }
 
+void AVDCharacter::TryClimbLedge()
+{
+	FVector WallLocation;
+	FVector LedgeLocation;
+
+	if (CheckForClimbableLedge(WallLocation, LedgeLocation))
+	{
+		CharacterMovementComponent->ClimbLedge(GetActorLocation(), WallLocation, LedgeLocation);
+	}
+}
+
 
 // Overrides of protected interface
 
@@ -161,63 +162,21 @@ void AVDCharacter::BeginPlay()
 	
 }
 
+void AVDCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	CharacterMovementComponent = Cast<UVDCharacterMovementComponent>(GetMovementComponent());
+}
+
 
 // VD protected interface
 
-void AVDCharacter::CheckCrouch()
+void AVDCharacter::AdjustEyeHeight()
 {
-	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
-	if (MovementComponent == nullptr) {
-		UE_LOG(LogVD, Warning, TEXT("VDCharacter %s does not have a character movement component"), *GetNameSafe(this));
-		return;
-	}
-
-	float CrouchedEyeHeightFromGround = CrouchedEyeHeight + MovementComponent->CrouchedHalfHeight;
-
-	// If our animation has completed (camera height = desired crouched eye height)
-	// notify the movement component to change capsule height
-	if (GetCurrentEyeHeightFromGround() == CrouchedEyeHeightFromGround && !bIsCrouched && bAttemptingCrouch)
-	{
-		Crouch();
-	}
-	// If we're currently crouched, and stopped attempting for any reason, notify
-	// the movement component to reset capsule height
-	else if (bIsCrouched && !bAttemptingCrouch)
-	{
-		UnCrouch();
-	}
-}
-
-void AVDCharacter::AdjustEyeHeight(float DeltaTime)
-{
-	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
-
-	if (MovementComponent == nullptr)
-	{
-		UE_LOG(LogVD, Warning, TEXT("VDCharacter %s does not have a character movement component"), *GetNameSafe(this));
-		return;
-	}
-
-	float StandingHalfHeight = GetDefaultHalfHeight();
-	float CrouchedHalfHeight = MovementComponent->CrouchedHalfHeight;
-
-	if (bAttemptingCrouch || bIsCrouched)
-	{
-		// Figure out the limits of the camera height (from the ground) using the final crouched height
-		float CrouchedEyeHeightFromGround = MovementComponent->CrouchedHalfHeight + CrouchedEyeHeight;
-		EyeHeightFromGround -= CrouchSpeed * DeltaTime;
-		EyeHeightFromGround = FMath::Max<float>(EyeHeightFromGround, CrouchedEyeHeightFromGround);
-	}
-	else
-	{
-		// Figure out the limits of the camera height (from the ground) using the default height
-		float StandingEyeHeightFromGround = StandingHalfHeight + BaseEyeHeight;
-		EyeHeightFromGround += CrouchSpeed * DeltaTime;
-		EyeHeightFromGround = FMath::Min<float>(EyeHeightFromGround, StandingEyeHeightFromGround);
-	}
-
-	// Set camera height relative to ground using current capsule half height
-	GetViewAttachment()->SetRelativeLocation(FVector::UpVector * GetCurrentEyeHeightFromCenter());
+	float TopHeight = CharacterMovementComponent->GetCurrentHalfHeight();
+	float EyeHeight = TopHeight - HeadToEyeHeight;
+	GetViewAttachment()->SetRelativeLocation(FVector::UpVector * EyeHeight);
 }
 
 void AVDCharacter::UpdateViewRotation()
@@ -255,7 +214,7 @@ void AVDCharacter::CheckFocus()
 			{
 				if (i != nullptr)
 				{
-					i->OnUnfocused();
+					i->OnUnfocused(this);
 				}
 			}
 		}
@@ -271,31 +230,19 @@ void AVDCharacter::CheckFocus()
 			{
 				if (i != nullptr)
 				{
-					i->OnFocused();
+					i->OnFocused(this);
 				}
 			}
 		}
 	}
 }
 
-void AVDCharacter::UpdateTriggerCapsule()
+bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation)
 {
-	UCapsuleComponent* RegularCapsule = GetCapsuleComponent();
-
-	if (TriggerCapsule != nullptr && RegularCapsule != nullptr)
-	{
-		TriggerCapsule->SetCapsuleSize(RegularCapsule->GetUnscaledCapsuleRadius(), RegularCapsule->GetUnscaledCapsuleHalfHeight());
-	}
-}
-
-bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
-{
-	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
-
 	// Create collision shapes for the current state, and one explicitly for a crouching character
-	FCollisionShape RegularShape = TriggerCapsule->GetCollisionShape();
+	FCollisionShape RegularShape = GetCapsuleComponent()->GetCollisionShape();
 	FCollisionShape CrouchingShape = RegularShape;
-	CrouchingShape.Capsule.HalfHeight = MovementComponent->CrouchedHalfHeight;
+	CrouchingShape.Capsule.HalfHeight = GetCharacterMovementComponent()->CrouchedHalfHeight;
 	float RegularHalfHeight = RegularShape.Capsule.HalfHeight + RegularShape.Capsule.Radius;
 	float CrouchingHalfHeight = CrouchingShape.Capsule.HalfHeight + CrouchingShape.Capsule.Radius;
 
@@ -315,6 +262,8 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 	if (GetWorld()->SweepSingleByChannel(WallHitResult, WallTraceStart, WallTraceEnd, FQuat::Identity,
 		ECollisionChannel::ECC_Pawn, RegularShape, TraceParams))
 	{
+		WallLocation = WallHitResult.Location;
+
 		// Get offset along floor plane
 		FVector FloorLocation = WallHitResult.ImpactPoint - WallHitResult.ImpactNormal * ClimbForwardDistance;
 		FloorLocation.Z = 0.f;
@@ -331,27 +280,16 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& NewLocation)
 		// Trace using character capsule shape
 		FHitResult LedgeHitResult;
 
-		// Debug draw the start of the ledge trace
-		DrawDebugCapsule(GetWorld(), LedgeTraceStart, CrouchingShape.Capsule.HalfHeight,
-			CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Green, false, 0.1f);
-
 		if (GetWorld()->SweepSingleByChannel(LedgeHitResult, LedgeTraceStart, LedgeTraceEnd, FQuat::Identity,
 			ECollisionChannel::ECC_Pawn, CrouchingShape, TraceParams))
 		{
-			// Draw a small sphere on the ledge hit
-			DrawDebugSphere(GetWorld(), LedgeHitResult.ImpactPoint, 1.f, 16, FColor::Red, false, 0.1f);
-
 			// Calculate the angle between a flat plane and the ledge candidate
 			float SlopeDotProduct = FVector::DotProduct(FVector::UpVector, LedgeHitResult.ImpactNormal);
 			float SlopeAngle = FMath::RadiansToDegrees(FMath::Acos(SlopeDotProduct));
 
 			if (!LedgeHitResult.bStartPenetrating && SlopeAngle < MaxLedgeAngle)
 			{
-				// Debug draw where the player can stand
-				DrawDebugCapsule(GetWorld(), LedgeHitResult.Location, CrouchingShape.Capsule.HalfHeight, 
-					CrouchingShape.Capsule.Radius, FQuat::Identity, FColor::Blue, false, 0.1f);
-
-				NewLocation = LedgeHitResult.Location;
+				LedgeLocation = LedgeHitResult.Location;
 
 				return true;
 			}
