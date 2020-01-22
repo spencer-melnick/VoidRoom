@@ -10,6 +10,13 @@
 #include "../VoidRoom.h"
 
 
+UInteractableComponent::UInteractableComponent()
+{
+	// Replicate this object and its owner
+	SetIsReplicated(true);
+	// GetOwner()->SetReplicates(true);
+}
+
 // VD public interface
 
 void UInteractableComponent::OnFocused(AVDCharacter* Character)
@@ -28,13 +35,26 @@ void UInteractableComponent::OnUnfocused(AVDCharacter* Character)
 	}
 }
 
-void UInteractableComponent::OnInteract(AVDCharacter* Character)
+
+// Networked interact
+bool UInteractableComponent::MulticastInteract_Validate(AVDCharacter* Character)
 {
-	UE_LOG(LogVD, Log, TEXT("Character %s has interacted with incomplete interactable component %s"), *GetNameSafe(Character), *GetNameSafe(this));
+	// TODO: Some kind of validation? Depends on how much we trust the server
+	return true;
+}
+
+void UInteractableComponent::MulticastInteract_Implementation(AVDCharacter* Character)
+{
+	OnInteract(Character);
 }
 
 
 // VD protected interface
+
+void UInteractableComponent::OnInteract(AVDCharacter* Character)
+{
+	UE_LOG(LogVD, Log, TEXT("Character %s has interacted with incomplete interactable component %s"), *GetNameSafe(Character), *GetNameSafe(this));
+}
 
 void UInteractableComponent::ShowHighlight()
 {

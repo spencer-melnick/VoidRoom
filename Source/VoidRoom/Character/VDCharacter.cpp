@@ -129,16 +129,7 @@ void AVDCharacter::Interact()
 {
 	if (FocusedActor != nullptr)
 	{
-		TInlineComponentArray<UInteractableComponent*> InteractableComponents(FocusedActor);
-		FocusedActor->GetComponents<UInteractableComponent>(InteractableComponents, true);
-
-		for (auto& i : InteractableComponents)
-		{
-			if (i != nullptr)
-			{
-				i->OnInteract(this);
-			}
-		}
+		ServerInteract(FocusedActor);
 	}
 }
 
@@ -297,4 +288,30 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 	}
 
 	return false;
+}
+
+// Networked functions
+
+bool AVDCharacter::ServerInteract_Validate(AActor* Target)
+{
+	// TODO: Test if the target can actually be interacted with
+
+	return true;
+}
+
+void AVDCharacter::ServerInteract_Implementation(AActor* Target)
+{
+	if (Target != nullptr)
+	{
+		TInlineComponentArray<UInteractableComponent*> InteractableComponents(Target);
+		Target->GetComponents<UInteractableComponent>(InteractableComponents, true);
+
+		for (auto& i : InteractableComponents)
+		{
+			if (i != nullptr)
+			{
+				i->MulticastInteract(this);
+			}
+		}
+	}
 }
