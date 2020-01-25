@@ -13,7 +13,7 @@
 UInteractableComponent::UInteractableComponent()
 {
 	// Replicate this object and its owner
-	SetIsReplicated(true);
+	// SetIsReplicated(true);
 	// GetOwner()->SetReplicates(true);
 }
 

@@ -10,7 +10,7 @@
 #include "DrawDebugHelpers.h"
 
 #include "../VoidRoom.h"
-#include "../Gameplay/InteractableComponent.h"
+#include "../Gameplay/InteractiveActor.h"
 
 AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVDCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -195,34 +195,26 @@ void AVDCharacter::CheckFocus()
 	// If we're looking at a new actor
 	if (FocusedActor != HitActor)
 	{
-		// Notify all of the previous interactable components they have been unfocused
+		// Notify the previous focused actor that it was unfocused locally
 		if (FocusedActor != nullptr)
 		{
-			TInlineComponentArray<UInteractableComponent*> InteractableComponents(FocusedActor);
-			FocusedActor->GetComponents<UInteractableComponent>(InteractableComponents, true);
+			AInteractiveActor* InteractiveActor = Cast<AInteractiveActor>(FocusedActor);
 
-			for (auto& i : InteractableComponents)
+			if (InteractiveActor != nullptr)
 			{
-				if (i != nullptr)
-				{
-					i->OnUnfocused(this);
-				}
+				InteractiveActor->LocalUnfocused(this);
 			}
 		}
 
-		// Notify all the new interactable components they have been focused
+		// Notify the new actor that it has been focused locally
 		FocusedActor = HitActor;
 		if (FocusedActor != nullptr)
 		{
-			TInlineComponentArray<UInteractableComponent*> InteractableComponents(this);
-			FocusedActor->GetComponents<UInteractableComponent>(InteractableComponents, true);
+			AInteractiveActor* InteractiveActor = Cast<AInteractiveActor>(FocusedActor);
 
-			for (auto& i : InteractableComponents)
+			if (InteractiveActor != nullptr)
 			{
-				if (i != nullptr)
-				{
-					i->OnFocused(this);
-				}
+				InteractiveActor->LocalFocused(this);
 			}
 		}
 	}
@@ -303,15 +295,11 @@ void AVDCharacter::ServerInteract_Implementation(AActor* Target)
 {
 	if (Target != nullptr)
 	{
-		TInlineComponentArray<UInteractableComponent*> InteractableComponents(Target);
-		Target->GetComponents<UInteractableComponent>(InteractableComponents, true);
+		AInteractiveActor* InteractiveActor = Cast<AInteractiveActor>(Target);
 
-		for (auto& i : InteractableComponents)
+		if (InteractiveActor != nullptr)
 		{
-			if (i != nullptr)
-			{
-				i->MulticastInteract(this);
-			}
+			InteractiveActor->MulticastInteract(this);
 		}
 	}
 }
