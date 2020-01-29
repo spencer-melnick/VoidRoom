@@ -76,6 +76,10 @@ protected:
 	void UpdateTriggerCapsule();
 	bool CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation);
 
+	// Networked functions
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerInteract(AActor* Target);
+
 private:
 	// Attached components
 	USceneComponent* ViewAttachment;

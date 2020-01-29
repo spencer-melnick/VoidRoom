@@ -14,7 +14,7 @@ public class VoidRoom : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "RHI", "RenderCore"});
 
-		PublicDependencyModuleNames.AddRange(new string[] { "MovieScene", "LevelSequence" });
+		PublicDependencyModuleNames.AddRange(new string[] { "MovieScene", "LevelSequence", "TemplateSequence" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
