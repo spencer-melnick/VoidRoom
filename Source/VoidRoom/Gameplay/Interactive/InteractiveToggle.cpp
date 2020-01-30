@@ -3,7 +3,7 @@
 
 #include "InteractiveToggle.h"
 
-#include "../VoidRoom.h"
+#include "../../VoidRoom.h"
 
 AInteractiveToggle::AInteractiveToggle(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)

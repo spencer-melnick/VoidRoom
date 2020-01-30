@@ -10,7 +10,7 @@
 #include "DrawDebugHelpers.h"
 
 #include "../VoidRoom.h"
-#include "../Gameplay/InteractiveActor.h"
+#include "../Gameplay/Interactive/InteractiveActor.h"
 
 AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVDCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
