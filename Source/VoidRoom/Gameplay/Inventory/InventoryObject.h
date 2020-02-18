@@ -6,12 +6,11 @@
 #include "UObject/NoExportTypes.h"
 #include "InventoryObject.generated.h"
 
-UCLASS()
-class VOIDROOM_API UInventoryObject : public UObject
+USTRUCT()
+struct VOIDROOM_API FInventoryObject
 {
 	GENERATED_BODY()
 
-public:
 	UPROPERTY(EditAnywhere)
 	FString Name;
 	

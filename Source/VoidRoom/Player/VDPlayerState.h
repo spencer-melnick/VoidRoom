@@ -19,7 +19,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(EditAnywhere, Replicated)
-	TArray<UInventoryObject*> Inventory;
+	TArray<FInventoryObject> Inventory;
 
 protected:
 	UFUNCTION()
