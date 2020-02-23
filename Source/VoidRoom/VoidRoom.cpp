@@ -4,6 +4,7 @@
 #include "Modules/ModuleManager.h"
 #include "Logging/LogMacros.h"
 #include "Misc/Paths.h"
+#include "GlobalShader.h"
 
 DEFINE_LOG_CATEGORY(LogVD);
 

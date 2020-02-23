@@ -2,11 +2,15 @@
 
 #include "OceanSim.h"
 
+#include "GlobalShader.h"
+#include "Interfaces/IPluginManager.h"
+
 #define LOCTEXT_NAMESPACE "FOceanSimModule"
 
 void FOceanSimModule::StartupModule()
 {
-	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
+	FString PluginShaderDir = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("OceanSim"))->GetBaseDir(), TEXT("Shaders"));
+	AddShaderSourceDirectoryMapping(TEXT("/OceanShaders"), PluginShaderDir);
 }
 
 void FOceanSimModule::ShutdownModule()

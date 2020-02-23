@@ -40,6 +40,7 @@ public class OceanSim : ModuleRules
 			{
 				"Slate",
 				"SlateCore",
+				"Projects"
 			}
 			);
 		
