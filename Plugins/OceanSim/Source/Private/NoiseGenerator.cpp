@@ -13,5 +13,6 @@ void ANoiseGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 
-	GaussianShader.Execute(FIntPoint(128, 128));
+	GaussianShader.AllocateResources(FIntPoint(128, 128));
+	GaussianShader.Execute();
 }

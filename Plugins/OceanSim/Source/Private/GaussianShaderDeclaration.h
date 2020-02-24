@@ -16,8 +16,8 @@ public:
 	SHADER_USE_PARAMETER_STRUCT(FGaussianShaderDeclaration, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_SRV(Texture2D<float4>, UniformNoiseTexture)
-		SHADER_PARAMETER_UAV(RWTexture2DArray<float>, GaussianNoiseTexture)
+		SHADER_PARAMETER_UAV(RWStructuredBuffer<float4>, NoiseBuffer)
+		SHADER_PARAMETER(FIntPoint, NoiseBufferSize)
 	END_SHADER_PARAMETER_STRUCT()
 
 

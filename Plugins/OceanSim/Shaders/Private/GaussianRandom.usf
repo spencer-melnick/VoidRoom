@@ -1,22 +1,28 @@
-Texture2D<float4> UniformNoiseTexture;
-RWTexture2DArray<float> GaussianNoiseTexture;
+RWStructuredBuffer<float4> NoiseBuffer;
+uint2 NoiseBufferSize;
 
 static const float Pi = 3.14159265358979323846f;
+
+uint CalculateIndex(uint2 id)
+{
+	return (id.y * NoiseBufferSize.x) + id.x;
+}
+
 
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
 void main( uint3 id : SV_DispatchThreadID )
 {
-	float4 NoiseSamples = UniformNoiseTexture[id.xy];
-	float4 GaussianResult;
+	uint Index = CalculateIndex(id.xy);
+	float4 InputNoise = NoiseBuffer[Index];
 
-	float a0 = sqrt(-2 * log(NoiseSamples.x));
-	float t0 = 2 * Pi * NoiseSamples.y;
+	float a0 = sqrt(-2 * log(InputNoise.x));
+	float t0 = 2 * Pi * InputNoise.y;
 
-	float a1 = sqrt(-2 * log(NoiseSamples.z));
-	float t1 = 2 * Pi * NoiseSamples.w;
+	float a1 = sqrt(-2 * log(InputNoise.z));
+	float t1 = 2 * Pi * InputNoise.w;
 
-	GaussianNoiseTexture[uint3(id.xy, 0)] = a0 * cos(t0);
-	GaussianNoiseTexture[uint3(id.xy, 1)] = a0 * sin(t0);
-	GaussianNoiseTexture[uint3(id.xy, 2)] = a1 * cos(t1);
-	GaussianNoiseTexture[uint3(id.xy, 3)] = a1 * sin(t1);
+	NoiseBuffer[Index].x = a0 * cos(t0);
+	NoiseBuffer[Index].y = a0 * sin(t0);
+	NoiseBuffer[Index].z = a1 * cos(t1);
+	NoiseBuffer[Index].w = a1 * sin(t1);
 }

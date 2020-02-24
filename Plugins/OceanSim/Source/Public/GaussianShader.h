@@ -6,13 +6,13 @@
 class FGaussianShader
 {
 public:
-	void Execute(FIntPoint BufferSize);
+	void AllocateResources(FIntPoint BufferSize);
+	void Execute();
 
 private:
-	FTexture2DArrayRHIRef GaussianNoiseTexture = nullptr;
-	FUnorderedAccessViewRHIRef GaussianNoiseTextureUAV = nullptr;
-	FTexture2DRHIRef UniformNoiseTexture = nullptr;
-	FShaderResourceViewRHIRef UniformNoiseTextureSRV = nullptr;
+	FStructuredBufferRHIRef NoiseBuffer = nullptr;
+	FUnorderedAccessViewRHIRef NoiseBufferUAV = nullptr;
+	FIntPoint NoiseBufferSize;
 	FCriticalSection Mutex;
 	bool bIsExecutionComplete = false;
 };
