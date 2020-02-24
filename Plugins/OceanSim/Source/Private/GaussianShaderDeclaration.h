@@ -16,7 +16,8 @@ public:
 	SHADER_USE_PARAMETER_STRUCT(FGaussianShaderDeclaration, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_UAV(RWTexture2D<float4>, Buffer)
+		SHADER_PARAMETER_SRV(Texture2D<float4>, UniformNoiseTexture)
+		SHADER_PARAMETER_UAV(RWTexture2DArray<float>, GaussianNoiseTexture)
 	END_SHADER_PARAMETER_STRUCT()
 
 
@@ -35,4 +36,4 @@ public:
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FGaussianShaderDeclaration, "/OceanShaders/GaussianRandom.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FGaussianShaderDeclaration, "/OceanShaders/Private/GaussianRandom.usf", "main", SF_Compute);
