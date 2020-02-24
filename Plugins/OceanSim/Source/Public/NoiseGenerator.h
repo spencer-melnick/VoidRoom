@@ -1,25 +1,18 @@
-// Copyright 2019 Spencer Melnick
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "GaussianShader.h"
+#include "RHI.h"
 
-#include "NoiseGenerator.generated.h"
-
-UCLASS()
-class OCEANSIM_API ANoiseGenerator : public AActor
+class FNoiseGenerator
 {
-	GENERATED_BODY()
-	
-public:	
-	ANoiseGenerator();
-
-protected:
-	virtual void BeginPlay() override;
+public:
+	void AllocateResources(FIntPoint BufferSize);
+	void Execute();
 
 private:
-	FGaussianShader GaussianShader;
-
+	FStructuredBufferRHIRef NoiseBuffer = nullptr;
+	FUnorderedAccessViewRHIRef NoiseBufferUAV = nullptr;
+	FIntPoint NoiseBufferSize;
+	FCriticalSection Mutex;
+	bool bIsExecutionComplete = false;
 };

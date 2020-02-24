@@ -9,11 +9,11 @@
 
 #define NUM_THREADS_PER_GROUP_DIMENSION 32
 
-class FGaussianShaderDeclaration: public FGlobalShader
+class FBoxMullerShader: public FGlobalShader
 {
 public:
-	DECLARE_GLOBAL_SHADER(FGaussianShaderDeclaration)
-	SHADER_USE_PARAMETER_STRUCT(FGaussianShaderDeclaration, FGlobalShader)
+	DECLARE_GLOBAL_SHADER(FBoxMullerShader)
+	SHADER_USE_PARAMETER_STRUCT(FBoxMullerShader, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_UAV(RWStructuredBuffer<float4>, NoiseBuffer)
@@ -36,4 +36,4 @@ public:
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FGaussianShaderDeclaration, "/OceanShaders/Private/GaussianRandom.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FBoxMullerShader, "/OceanShaders/Private/BoxMuller.usf", "main", SF_Compute);
