@@ -1,0 +1,23 @@
+RWTexture2D<float4> Buffer
+
+static const float Pi = 3.14159265358979323846f;
+
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+void main( uint3 id : SV_DispatchThreadID )
+{
+	float4 NoiseSamples = Buffer[id.xy];
+	float4 GaussianResult;
+
+	a0 = sqrt(-2 * log(NoiseSamples.x));
+	t0 = 2 * Pi * NoiseSamples.y;
+
+	a1 = sqrt(-2 * log(NoiseSamples.z));
+	t1 = 2 * Pi * NoiseSamples.w;
+
+	GaussianResult.x = a0 * cos(t0);
+	GaussianResult.y = a0 * sin(t0);
+	GaussianResult.z = a1 * cos(t1);
+	GaussianResult.w = a1 * sin(t1);
+
+	OutputTexture[id.xy] = GaussianResult;
+}
