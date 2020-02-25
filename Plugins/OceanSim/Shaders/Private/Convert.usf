@@ -1,0 +1,15 @@
+RWTexture2D<float4> OutputTexture;
+StructuredBuffer<float4> InputBuffer;
+uint2 InputBufferSize;
+
+uint CalculateIndex(uint2 id)
+{
+	return (id.y * InputBufferSize.x) + id.x;
+}
+
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+void main( uint3 id : SV_DispatchThreadID )
+{
+	uint Index = CalculateIndex(id.xy);
+	OutputTexture[id.xy] = InputBuffer[Index];
+}

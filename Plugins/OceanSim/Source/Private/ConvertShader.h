@@ -7,19 +7,19 @@
 #include "ShaderParameterUtils.h"
 #include "ShaderParameterStruct.h"
 
-class FBoxMullerShader: public FGlobalShader
+class FConvertShader: public FGlobalShader
 {
 public:
 	static const int32 ThreadsPerGroupDimension = 32;
 	
-	DECLARE_GLOBAL_SHADER(FBoxMullerShader)
-	SHADER_USE_PARAMETER_STRUCT(FBoxMullerShader, FGlobalShader)
+	DECLARE_GLOBAL_SHADER(FConvertShader)
+	SHADER_USE_PARAMETER_STRUCT(FConvertShader, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_UAV(RWStructuredBuffer<float4>, NoiseBuffer)
-		SHADER_PARAMETER(FIntPoint, NoiseBufferSize)
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, OutputTexture)
+		SHADER_PARAMETER_SRV(StructuredBuffer<float4>, InputBuffer)
+		SHADER_PARAMETER(FIntPoint, InputBufferSize)
 	END_SHADER_PARAMETER_STRUCT()
-
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
@@ -36,4 +36,4 @@ public:
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FBoxMullerShader, "/OceanShaders/Private/BoxMuller.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FConvertShader, "/OceanShaders/Private/Convert.usf", "main", SF_Compute);
