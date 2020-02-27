@@ -18,6 +18,10 @@
 		{
 			"Name": "TemplateSequence",
 			"Enabled": true
+		},
+		{
+			"Name": "RenderDocPlugin",
+			"Enabled": true
 		}
 	]
 }

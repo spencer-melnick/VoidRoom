@@ -4,22 +4,22 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "NoiseGenerator.h"
+#include "WaveGenerator.h"
 
-#include "NoiseGeneratorActor.generated.h"
+#include "WaveGeneratorActor.generated.h"
 
 UCLASS()
-class OCEANSIM_API ANoiseGeneratorActor : public AActor
+class OCEANSIM_API AWaveGeneratorActor : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
-	ANoiseGeneratorActor();
+	AWaveGeneratorActor();
 
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	FNoiseGenerator NoiseGenerator;
+	FWaveGenerator WaveGenerator;
 
 };

@@ -1,0 +1,40 @@
+#pragma once
+
+int2 BufferSize;
+float Amplitude;
+float PatchLength;
+float Gravity;
+float WindSpeed;
+float2 WindDirection;
+
+static const float Pi = 3.14159265358979323846f;
+
+uint CalculateIndex(uint2 id)
+{
+	return (id.y * BufferSize.x) + id.x;
+}
+
+float2 CalculateK(uint2 Index)
+{
+	float kx = Pi * (2 * Index.x - BufferSize.x) / PatchLength;
+	float ky = Pi * (2 * Index.y - BufferSize.y) / PatchLength;
+
+	return float2(kx, ky);
+}
+
+float2 ImaginaryExponent(float theta)
+{
+	return float2(cos(theta), sin(theta));
+}
+
+float2 Conjugate(float2 Complex)
+{
+	return float2(Complex.x, -Complex.y);
+}
+
+float2 ComplexMultiply(float2 Complex1, float2 Complex2)
+{
+	float Real = Complex1.x * Complex2.x - Complex1.y * Complex2.y;
+	float Imaginary = Complex1.x * Complex2.y + Complex1.y * Complex2.x;
+	return float2(Real, Imaginary);
+}
