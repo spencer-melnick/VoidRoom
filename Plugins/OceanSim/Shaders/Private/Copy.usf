@@ -1,0 +1,10 @@
+Texture2D<float4> InputTexture;
+RWTexture2D<float4> OutputTexture;
+float Bias;
+float Scale;
+
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
+void main( uint3 id : SV_DispatchThreadID )
+{
+    OutputTexture[id.xy] = abs(InputTexture[id.xy] * Scale + float4(Bias, Bias, Bias, Bias));
+}

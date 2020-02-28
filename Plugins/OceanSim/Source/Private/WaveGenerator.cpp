@@ -5,15 +5,15 @@
 #include "RenderGraphBuilder.h"
 #include "PixelShaderUtils.h"
 
-// #include "BoxMullerShader.h"
+#include "BoxMullerShader.h"
 // #include "InitialComponentsShader.h"
-#include "TestShader.h"
+#include "CopyShader.h"
 
 void FWaveGenerator::Initialize(FIntPoint Dimensions)
 {
 	BufferSize = Dimensions;
 	uint32 NumElements = BufferSize.X * BufferSize.Y * 4;
-	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FTestShader::ThreadsPerGroupDimension);
+	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FCopyShader::ThreadsPerGroupDimension);
 
 	InputData.Init(FFloat16(), sizeof(FFloat16) * 4 * NumElements);
 
@@ -29,32 +29,42 @@ void FWaveGenerator::Initialize(FIntPoint Dimensions)
 		FRDGBuilder GraphBuilder(CommandListImmediate);
 
 		FRHIResourceCreateInfo CreateInfo;
-		FTexture2DRHIRef InputTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_FloatRGBA, 1, 1,
+		FTexture2DRHIRef UniformNoiseTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_FloatRGBA, 1, 1,
 			TexCreate_ShaderResource, CreateInfo);
-		FShaderResourceViewRHIRef InputTextureSRV = RHICreateShaderResourceView(InputTexture, 0);
+		FShaderResourceViewRHIRef UniformNoiseTextureSRV = RHICreateShaderResourceView(UniformNoiseTexture, 0);
+
+		FTexture2DRHIRef GaussianNoiseTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_FloatRGBA, 1, 1,
+			TexCreate_ShaderResource | TexCreate_UAV, CreateInfo);
+		FUnorderedAccessViewRHIRef GaussianNoiseTextureUAV = RHICreateUnorderedAccessView(GaussianNoiseTexture);
+		FShaderResourceViewRHIRef GaussianNoiseTextureSRV = RHICreateShaderResourceView(GaussianNoiseTexture, 0);
+
+		// Copy uniform noise data to texture
+		uint32 Stride;
+		FFloat16* TextureData = static_cast<FFloat16*>(RHILockTexture2D(UniformNoiseTexture, 0, EResourceLockMode::RLM_WriteOnly, Stride, false));
+		FMemory::Memcpy(TextureData, InputData.GetData(), NumElements * sizeof(FFloat16));
+		RHIUnlockTexture2D(UniformNoiseTexture, 0, false);
 
 		FRDGTextureDesc OutputTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::BlackMaxAlpha,
 			TexCreate_None,	TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable, false);
-		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("Test Texture"));
+		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("Wave Debug Texture"));
 
-		FTestShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FTestShader::FParameters>();
-		PassParameters->OutputTexture = GraphBuilder.CreateUAV(OutputTexture);
-		PassParameters->OutputTextureSize = BufferSize;
-		PassParameters->InputTexture = InputTextureSRV;
+		FBoxMullerShader::FParameters* BoxMullerPassParameters = GraphBuilder.AllocParameters<FBoxMullerShader::FParameters>();
+		BoxMullerPassParameters->InputTexture = UniformNoiseTextureSRV;
+		BoxMullerPassParameters->OutputTexture = GaussianNoiseTextureUAV;
 
-		TShaderMapRef<FTestShader> TestShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		TShaderMapRef<FBoxMullerShader> BoxMullerShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
-		uint32 Stride;
-		FFloat16* TextureData = static_cast<FFloat16*>(RHILockTexture2D(InputTexture, 0, EResourceLockMode::RLM_WriteOnly, Stride, false));
-		FMemory::Memcpy(TextureData, InputData.GetData(), NumElements * sizeof(FFloat16));
-		RHIUnlockTexture2D(InputTexture, 0, false);
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Box Muller Pass"), *BoxMullerShader, BoxMullerPassParameters, GroupCount);
 
-		GraphBuilder.AddPass(RDG_EVENT_NAME("Test Shader Pass"), PassParameters, ERDGPassFlags::Compute,
-		[&TestShader, &PassParameters, &InputTexture, GroupCount]
-		(FRHICommandList& CommandList)
-		{
-			FComputeShaderUtils::Dispatch(CommandList, *TestShader, *PassParameters, GroupCount);
-		});
+		FCopyShader::FParameters* CopyPassParameters = GraphBuilder.AllocParameters<FCopyShader::FParameters>();
+		CopyPassParameters->InputTexture = GaussianNoiseTextureSRV;
+		CopyPassParameters->OutputTexture = GraphBuilder.CreateUAV(OutputTexture);
+		CopyPassParameters->Bias = 0.5;
+		CopyPassParameters->Scale = 1 / 2.5;
+
+		TShaderMapRef<FCopyShader> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Copy Texture Pass"), *CopyShader, CopyPassParameters, GroupCount);
 
 		GraphBuilder.Execute();
 	});

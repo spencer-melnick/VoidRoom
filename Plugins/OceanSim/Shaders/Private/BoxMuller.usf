@@ -1,28 +1,18 @@
-RWStructuredBuffer<float4> NoiseBuffer;
-uint2 NoiseBufferSize;
+Texture2D<float4> InputTexture;
+RWTexture2D<float4> OutputTexture;
 
 static const float Pi = 3.14159265358979323846f;
 
-uint CalculateIndex(uint2 id)
-{
-	return (id.y * NoiseBufferSize.x) + id.x;
-}
-
-
-[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
 void main( uint3 id : SV_DispatchThreadID )
 {
-	uint Index = CalculateIndex(id.xy);
-	float4 InputNoise = NoiseBuffer[Index];
+	float4 InputNoise = InputTexture[id.xy];
 
 	float a0 = sqrt(-2 * log(InputNoise.x));
 	float t0 = 2 * Pi * InputNoise.y;
 
 	float a1 = sqrt(-2 * log(InputNoise.z));
 	float t1 = 2 * Pi * InputNoise.w;
-
-	NoiseBuffer[Index].x = a0 * cos(t0);
-	NoiseBuffer[Index].y = a0 * sin(t0);
-	NoiseBuffer[Index].z = a1 * cos(t1);
-	NoiseBuffer[Index].w = a1 * sin(t1);
+	
+    OutputTexture[id.xy] = float4(a0 * cos(t0), a0 * sin(t0), a1 * cos(t1), a1 * sin(t1));
 }

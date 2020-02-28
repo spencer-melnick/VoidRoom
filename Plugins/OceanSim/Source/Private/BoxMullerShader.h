@@ -1,6 +1,6 @@
 #pragma once
 
-/* #include "CoreMinimal.h"
+#include "CoreMinimal.h"
 
 #include "Shader.h"
 #include "GlobalShader.h"
@@ -16,8 +16,8 @@ public:
 	SHADER_USE_PARAMETER_STRUCT(FBoxMullerShader, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_UAV(RWStructuredBuffer<float4>, NoiseBuffer)
-		SHADER_PARAMETER(FIntPoint, NoiseBufferSize)
+		SHADER_PARAMETER_SRV(Texture2D<float4>, InputTexture)
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, OutputTexture)
 	END_SHADER_PARAMETER_STRUCT()
 
 
@@ -32,8 +32,7 @@ public:
 
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_X"), ThreadsPerGroupDimension);
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Y"), ThreadsPerGroupDimension);
-		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Z"), 1);
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FBoxMullerShader, "/OceanShaders/Private/BoxMuller.usf", "main", SF_Compute); */
+IMPLEMENT_GLOBAL_SHADER(FBoxMullerShader, "/OceanShaders/Private/BoxMuller.usf", "main", SF_Compute);
