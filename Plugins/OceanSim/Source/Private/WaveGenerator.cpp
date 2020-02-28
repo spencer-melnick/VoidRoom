@@ -1,6 +1,6 @@
 #include "WaveGenerator.h"
 
-#include "Containers/DynamicRHIResourceArray.h"
+#include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
 #include "RenderGraphBuilder.h"
 #include "PixelShaderUtils.h"
@@ -9,12 +9,66 @@
 // #include "InitialComponentsShader.h"
 #include "CopyShader.h"
 
+FWaveGenerator::~FWaveGenerator()
+{
+	// Just in case the object is somehow still hooked to the render thread
+	StopRendering();
+}
+
+
 void FWaveGenerator::Initialize(FIntPoint Dimensions)
 {
 	BufferSize = Dimensions;
 
 	GenerateGaussianNoise();
 }
+
+void FWaveGenerator::BeginRendering()
+{
+	if (ResolvedSceneColorHandle.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot attach Wave Generator to rendering thread - already attached"));
+		return;
+	}
+
+	const FName RendererModuleName("Renderer");
+	IRendererModule* RendererModule = FModuleManager::GetModulePtr<IRendererModule>(RendererModuleName);
+	
+	if (RendererModule != nullptr)
+	{
+		ResolvedSceneColorHandle = RendererModule->GetResolvedSceneColorCallbacks().AddRaw(this, &FWaveGenerator::OnRender);
+	}
+}
+
+void FWaveGenerator::StopRendering()
+{
+	if (!ResolvedSceneColorHandle.IsValid())
+	{
+		return;
+	}
+
+	const FName RendererModuleName("Renderer");
+	IRendererModule* RendererModule = FModuleManager::GetModulePtr<IRendererModule>(RendererModuleName);
+	if (RendererModule)
+	{
+		RendererModule->GetResolvedSceneColorCallbacks().Remove(ResolvedSceneColorHandle);
+	}
+
+	ResolvedSceneColorHandle.Reset();
+}
+
+void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext)
+{
+	if (!InitialComponentsTexture.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Wave Generator is missing initial height components texture - make sure to call Initialize() first"));
+		return;
+	}
+
+	
+}
+
+
 
 void FWaveGenerator::GenerateGaussianNoise()
 {
@@ -47,6 +101,13 @@ void FWaveGenerator::GenerateGaussianNoise()
 		GaussianNoiseTextureSRV = RHICreateShaderResourceView(GaussianNoiseTexture, 0);
 		FUnorderedAccessViewRHIRef GaussianNoiseTextureUAV = RHICreateUnorderedAccessView(GaussianNoiseTexture);
 
+		// Allocate initial components texture
+		InitialComponentsTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_FloatRGBA, 1, 1,
+			TexCreate_ShaderResource | TexCreate_UAV, CreateInfo);
+		InitialComponentsTextureSRV = RHICreateShaderResourceView(GaussianNoiseTexture, 0);
+		InitialComponentsTextureUAV = RHICreateUnorderedAccessView(GaussianNoiseTexture);
+		
+
 		// Copy uniform noise data to texture
 		uint32 Stride;
 		FFloat16* TextureData = static_cast<FFloat16*>(RHILockTexture2D(UniformNoiseTexture, 0, EResourceLockMode::RLM_WriteOnly, Stride, false));
@@ -60,7 +121,6 @@ void FWaveGenerator::GenerateGaussianNoise()
 		TShaderMapRef<FBoxMullerShader> BoxMullerShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Box Muller Pass"), *BoxMullerShader, BoxMullerPassParameters, GroupCount);
-
 
 		
 		// Create a debug output texture

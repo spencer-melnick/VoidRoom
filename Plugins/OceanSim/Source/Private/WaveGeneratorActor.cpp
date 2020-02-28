@@ -14,4 +14,11 @@ void AWaveGeneratorActor::BeginPlay()
 	Super::BeginPlay();
 
 	WaveGenerator.Initialize(FIntPoint(256, 256));
+	WaveGenerator.BeginRendering();
 }
+
+void AWaveGeneratorActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	WaveGenerator.StopRendering();
+}
+
