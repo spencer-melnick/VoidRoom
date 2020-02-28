@@ -13,5 +13,5 @@ void AWaveGeneratorActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	WaveGenerator.Initialize(FIntPoint(128, 128));
+	WaveGenerator.Initialize(FIntPoint(256, 256));
 }

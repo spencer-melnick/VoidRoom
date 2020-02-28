@@ -8,10 +8,11 @@ class FWaveGenerator
 {
 public:
 	void Initialize(FIntPoint Dimensions);
+	void GenerateGaussianNoise();
 
 private:
+	bool bHasGaussianNoise = false;
 	FIntPoint BufferSize;
-	FStructuredBufferRHIRef InitialComponentsBuffer;
-	FUnorderedAccessViewRHIRef InitialComponentsBufferUAV;
-	TArray<FFloat16> InputData;
+	FTexture2DRHIRef GaussianNoiseTexture;
+	FShaderResourceViewRHIRef GaussianNoiseTextureSRV;
 };
