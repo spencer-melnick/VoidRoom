@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CoreMinimal.h"
+/* #include "CoreMinimal.h"
 
 #include "Shader.h"
 #include "GlobalShader.h"
@@ -39,4 +39,4 @@ public:
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FInitialComponentsShader, "/OceanShaders/Private/InitialComponents.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FInitialComponentsShader, "/OceanShaders/Private/InitialComponents.usf", "main", SF_Compute); */

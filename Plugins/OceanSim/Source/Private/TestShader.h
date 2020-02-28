@@ -1,23 +1,23 @@
 #pragma once
 
-/* #include "CoreMinimal.h"
+#include "CoreMinimal.h"
 
 #include "Shader.h"
 #include "GlobalShader.h"
 #include "ShaderParameterUtils.h"
 #include "ShaderParameterStruct.h"
 
-class FBoxMullerShader: public FGlobalShader
+class FTestShader: public FGlobalShader
 {
 public:
 	static const int32 ThreadsPerGroupDimension = 32;
-	
-	DECLARE_GLOBAL_SHADER(FBoxMullerShader)
-	SHADER_USE_PARAMETER_STRUCT(FBoxMullerShader, FGlobalShader)
+
+	DECLARE_GLOBAL_SHADER(FTestShader)
+	SHADER_USE_PARAMETER_STRUCT(FTestShader, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_UAV(RWStructuredBuffer<float4>, NoiseBuffer)
-		SHADER_PARAMETER(FIntPoint, NoiseBufferSize)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float>, OutputTexture)
+		SHADER_PARAMETER(FIntPoint, OutputTextureSize)
 	END_SHADER_PARAMETER_STRUCT()
 
 
@@ -29,11 +29,7 @@ public:
 	static inline void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 	{
 		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
-
-		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_X"), ThreadsPerGroupDimension);
-		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Y"), ThreadsPerGroupDimension);
-		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Z"), 1);
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FBoxMullerShader, "/OceanShaders/Private/BoxMuller.usf", "main", SF_Compute); */
+IMPLEMENT_GLOBAL_SHADER(FTestShader, "/OceanShaders/Private/Test.usf", "main", SF_Compute);
