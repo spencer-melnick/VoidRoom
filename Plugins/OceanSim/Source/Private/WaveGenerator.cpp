@@ -7,6 +7,7 @@
 
 #include "BoxMullerShader.h"
 #include "InitialComponentsShader.h"
+#include "RealtimeComponentsShader.h"
 #include "CopyShader.h"
 
 FWaveGenerator::~FWaveGenerator()
@@ -19,6 +20,7 @@ FWaveGenerator::~FWaveGenerator()
 void FWaveGenerator::Initialize(FIntPoint Dimensions)
 {
 	BufferSize = Dimensions;
+	StartTime = GRenderingRealtimeClock.GetCurrentTime();
 
 	GenerateGaussianNoise();
 }
@@ -58,7 +60,7 @@ void FWaveGenerator::StopRendering()
 }
 
 void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext)
-{
+{	
 	if (!InitialComponentsTexture.IsValid())
 	{
 		UE_LOG(LogTemp, Error, TEXT("Wave Generator is missing initial height components texture - make sure to call Initialize() first"));
@@ -104,6 +106,22 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 		bAreParametersUpToDate = true;
 	}
+
+	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FRealtimeComponentsShader::ThreadsPerGroupDimension);
+
+	FRDGTextureDesc ComponentsTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black,
+		TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false);
+	FRDGTextureRef ComponentsTexture = GraphBuilder.CreateTexture(ComponentsTextureDesc, TEXT("WaveHeightComponentsTexture"));
+
+	FRealtimeComponentsShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FRealtimeComponentsShader::FParameters>();
+	PassParameters->InitialComponents = InitialComponentsTextureSRV;
+	PassParameters->OutputTexture = GraphBuilder.CreateUAV(ComponentsTexture);
+	PassParameters->CommonParameters = CommonParameters;
+	PassParameters->Time = GRenderingRealtimeClock.GetCurrentTime() - StartTime;
+
+	TShaderMapRef<FRealtimeComponentsShader> ComponentsShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Realtime Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
 
 	GraphBuilder.Execute();
 }

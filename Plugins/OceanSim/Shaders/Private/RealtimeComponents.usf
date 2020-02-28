@@ -1,0 +1,23 @@
+#include "/OceanShaders/Private/Common.ush"
+
+Texture2D<float4> InitialComponents;
+RWTexture2D<float4> OutputTexture;
+
+float Time;
+
+float CalculateDispersion(float2 K)
+{
+	return sqrt(Gravity / length(K));
+}
+
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
+void main( uint3 id : SV_DispatchThreadID )
+{
+	float4 InitialSample = InitialComponents[id.xy];
+	float2 K = CalculateK(id.xy);
+	float w = CalculateDispersion(K);
+	float2 Complex1 = ImaginaryExponent(w * Time);
+	float2 Complex2 = ImaginaryExponent(-w * Time);
+
+    OutputTexture[id.xy] = float4(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2), 0, 1);
+}

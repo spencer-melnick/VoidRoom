@@ -29,5 +29,5 @@ void main( uint3 id : SV_DispatchThreadID )
 	float2 K = CalculateK(id.xy);
     float2 RedGreen = float2(id.xy) / float2(BufferSize);
     float Magnitude = sqrt(Phillips(K)) / sqrt(2);
-    ComponentTexture[id.xy] = Magnitude * float4(InputNoise.xy, 0, 1);
+    ComponentTexture[id.xy] = Magnitude * float4(InputNoise.xy, Conjugate(InputNoise.zw));
 }

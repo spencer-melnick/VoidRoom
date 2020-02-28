@@ -22,6 +22,7 @@ private:
 	bool bHasGaussianNoise = false;
 	bool bAreParametersUpToDate = false;
 	FIntPoint BufferSize;
+	float StartTime;
 	
 	FTexture2DRHIRef GaussianNoiseTexture;
 	FShaderResourceViewRHIRef GaussianNoiseTextureSRV;
