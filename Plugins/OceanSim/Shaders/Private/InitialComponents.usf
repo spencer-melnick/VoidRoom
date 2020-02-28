@@ -1,10 +1,15 @@
 #include "/OceanShaders/Private/Common.ush"
 
-StructuredBuffer<float4> NoiseBuffer;
-RWStructuredBuffer<float4> OutputBuffer;
+Texture2D<float4> NoiseTexture;
+RWTexture2D<float4> ComponentTexture;
 
 float Phillips(float2 K)
 {
+    if (abs(K.x * K.y) < 0.0000000001)
+    {
+        return float2(0, 0);
+    }
+	
 	float L = WindSpeed * WindSpeed / Gravity;
 	float l = L / 1000;
 
@@ -12,28 +17,17 @@ float Phillips(float2 K)
 	float k2 = K.x * K.y;
 
 	float kw = dot(k, WindDirection);
-	float kw2 = kw * kw;
 
-	return Amplitude * exp(-1 / (k2 * L * L)) * kw2 * exp(-k2 * l * l) / (k2 * k2);
-}
-
-float2 SingleComponent(float2 K, float2 noise)
-{
-	if (K.x * K.y < 0.001)
-	{
-		return float2(0, 0);
-	}
-
-	float factor = (1 / sqrt(2)) * sqrt(Phillips(K));
-	return noise * factor;
+    return Amplitude * exp(-1 / (k2 * L * L)) * pow(kw, 6) * exp(-k2 * l * l) / (k2 * k2);
 }
 
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
 void main( uint3 id : SV_DispatchThreadID )
 {
-	uint Index = CalculateIndex(id.xy);
-	float4 InputNoise = NoiseBuffer[Index];
+	float4 InputNoise = NoiseTexture[id.xy];
 
 	float2 K = CalculateK(id.xy);
-	OutputBuffer[Index] = float4(SingleComponent(K, InputNoise.xy), Conjugate(SingleComponent(-K, InputNoise.zw)));
+    float2 RedGreen = float2(id.xy) / float2(BufferSize);
+    float Magnitude = sqrt(Phillips(K)) / sqrt(2);
+    ComponentTexture[id.xy] = Magnitude * float4(InputNoise.xy, 0, 1);
 }

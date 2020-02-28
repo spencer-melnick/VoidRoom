@@ -6,7 +6,7 @@
 #include "PixelShaderUtils.h"
 
 #include "BoxMullerShader.h"
-// #include "InitialComponentsShader.h"
+#include "InitialComponentsShader.h"
 #include "CopyShader.h"
 
 FWaveGenerator::~FWaveGenerator()
@@ -65,9 +65,48 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		return;
 	}
 
-	
-}
+	FRDGBuilder GraphBuilder(RHICmdList);
 
+	FOceanShaderCommonParameters CommonParameters;
+	CommonParameters.BufferSize = BufferSize;
+	CommonParameters.Amplitude = 4;
+	CommonParameters.PatchLength = 1000;
+	CommonParameters.Gravity = 9.81;
+	CommonParameters.WindSpeed = 40;
+	CommonParameters.WindDirection = FVector2D(1, 1).GetSafeNormal(0.001);
+
+	if (!bAreParametersUpToDate)
+	{
+		FInitialComponentsShader::FParameters* InitialPassParameters = GraphBuilder.AllocParameters<FInitialComponentsShader::FParameters>();
+		InitialPassParameters->NoiseTexture = GaussianNoiseTextureSRV;
+		InitialPassParameters->ComponentTexture = InitialComponentsTextureUAV;
+		InitialPassParameters->CommonParameters = CommonParameters;
+
+		TShaderMapRef<FInitialComponentsShader> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FInitialComponentsShader::ThreadsPerGroupDimension);
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Initial Wave Height Component Generation"),
+			*ComputeShader, InitialPassParameters, GroupCount);
+
+		FRDGTextureDesc OutputTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::BlackMaxAlpha,
+			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable, false);
+		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("ComponentDebugTexture"));
+
+		FCopyShader::FParameters* CopyPassParameters = GraphBuilder.AllocParameters<FCopyShader::FParameters>();
+		CopyPassParameters->InputTexture = InitialComponentsTextureSRV;
+		CopyPassParameters->OutputTexture = GraphBuilder.CreateUAV(OutputTexture);
+		CopyPassParameters->Bias = 0;
+		CopyPassParameters->Scale = 1;
+
+		TShaderMapRef<FCopyShader> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Copy Component Texture Pass"), *CopyShader, CopyPassParameters, GroupCount);
+
+		bAreParametersUpToDate = true;
+	}
+
+	GraphBuilder.Execute();
+}
 
 
 void FWaveGenerator::GenerateGaussianNoise()
@@ -104,8 +143,8 @@ void FWaveGenerator::GenerateGaussianNoise()
 		// Allocate initial components texture
 		InitialComponentsTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_FloatRGBA, 1, 1,
 			TexCreate_ShaderResource | TexCreate_UAV, CreateInfo);
-		InitialComponentsTextureSRV = RHICreateShaderResourceView(GaussianNoiseTexture, 0);
-		InitialComponentsTextureUAV = RHICreateUnorderedAccessView(GaussianNoiseTexture);
+		InitialComponentsTextureSRV = RHICreateShaderResourceView(InitialComponentsTexture, 0);
+		InitialComponentsTextureUAV = RHICreateUnorderedAccessView(InitialComponentsTexture);
 		
 
 		// Copy uniform noise data to texture
@@ -126,7 +165,7 @@ void FWaveGenerator::GenerateGaussianNoise()
 		// Create a debug output texture
 		FRDGTextureDesc OutputTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::BlackMaxAlpha,
 			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable, false);
-		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("Gaussian Noise Debug Texture"));
+		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("GaussianNoiseDebugTexture"));
 
 		FCopyShader::FParameters* CopyPassParameters = GraphBuilder.AllocParameters<FCopyShader::FParameters>();
 		CopyPassParameters->InputTexture = GaussianNoiseTextureSRV;

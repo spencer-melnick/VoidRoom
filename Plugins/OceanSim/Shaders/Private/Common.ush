@@ -9,15 +9,10 @@ float2 WindDirection;
 
 static const float Pi = 3.14159265358979323846f;
 
-uint CalculateIndex(uint2 id)
-{
-	return (id.y * BufferSize.x) + id.x;
-}
-
 float2 CalculateK(uint2 Index)
 {
-	float kx = Pi * (2 * Index.x - BufferSize.x) / PatchLength;
-	float ky = Pi * (2 * Index.y - BufferSize.y) / PatchLength;
+    float kx = Pi * (2 * float(Index.x) - float(BufferSize.x)) / PatchLength;
+    float ky = Pi * (2 * float(Index.y) - float(BufferSize.y)) / PatchLength;
 
 	return float2(kx, ky);
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-/* #include "CoreMinimal.h"
+#include "CoreMinimal.h"
 
 #include "Shader.h"
 #include "GlobalShader.h"
@@ -18,8 +18,8 @@ public:
 	SHADER_USE_PARAMETER_STRUCT(FInitialComponentsShader, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float4>, NoiseBuffer)
-		SHADER_PARAMETER_UAV(RWStructuredBuffer<float4>, OutputBuffer)
+		SHADER_PARAMETER_SRV(Texture2D<float4>, NoiseTexture)
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, ComponentTexture)
 		SHADER_PARAMETER_STRUCT_INCLUDE(FOceanShaderCommonParameters, CommonParameters)
 	END_SHADER_PARAMETER_STRUCT()
 
@@ -39,4 +39,4 @@ public:
 	}
 };
 
-IMPLEMENT_GLOBAL_SHADER(FInitialComponentsShader, "/OceanShaders/Private/InitialComponents.usf", "main", SF_Compute); */
+IMPLEMENT_GLOBAL_SHADER(FInitialComponentsShader, "/OceanShaders/Private/InitialComponents.usf", "main", SF_Compute);
