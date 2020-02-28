@@ -4,6 +4,7 @@
 #include "RenderingThread.h"
 #include "RenderGraphBuilder.h"
 #include "PixelShaderUtils.h"
+#include "Containers/DynamicRHIResourceArray.h"
 
 #include "BoxMullerShader.h"
 #include "InitialComponentsShader.h"
@@ -23,6 +24,7 @@ void FWaveGenerator::Initialize(FIntPoint Dimensions)
 	StartTime = GRenderingRealtimeClock.GetCurrentTime();
 
 	GenerateGaussianNoise();
+	CalculateButterflyOperations();
 }
 
 void FWaveGenerator::BeginRendering()
@@ -202,6 +204,57 @@ void FWaveGenerator::GenerateGaussianNoise()
 	// otherwise the data will be unallocated before it can be copied to the texture
 	FlushRenderingCommands();
 	bHasGaussianNoise = true;
+}
+
+void FWaveGenerator::CalculateButterflyOperations()
+{
+	uint32 Dimension = FMath::Max(BufferSize.X, BufferSize.Y);
+	uint32 Iterations = FMath::LogX(2, Dimension);
+	
+	TResourceArray<FButterflyOperation> Operations;
+	Operations.Init(FButterflyOperation(0, 0, FVector2D(1, 0)), Iterations * Dimension / 2);
+
+	uint32 i = 0;
+	
+	for (uint32 s = 0; s < Iterations; s++)
+	{
+		uint32 m = static_cast<uint32>(FMath::Pow(2, s + 1));
+		FVector2D wm = ImaginaryExponent(2 * PI / m);
+		for (uint32 k = 0; k < Dimension; k += m)
+		{
+			FVector2D w = FVector2D(1, 0);
+			for (uint32 j = 0; j < m / 2; j ++)
+			{
+				Operations[i++] = FButterflyOperation(k + j, k + j + m / 2, w);
+				w = ComplexMultiply(w, wm);
+			}
+		}
+	}
+
+	ENQUEUE_RENDER_COMMAND(SceneDrawCompletion)
+	([this, &Operations]
+	(FRHICommandListImmediate& RHICmdList)
+	{
+		FRHIResourceCreateInfo CreateInfo;
+		CreateInfo.ResourceArray = &Operations;
+		ButterflyBuffer = RHICreateStructuredBuffer(sizeof(FButterflyOperation), sizeof(FButterflyOperation) * Operations.Num(),
+			BUF_ShaderResource, CreateInfo);
+		ButterflyBufferSRV = RHICreateShaderResourceView(ButterflyBuffer);
+	});
+
+	FlushRenderingCommands();
+
+	UE_LOG(LogTemp, Display, TEXT("Precomputed %i butterfly operations"), i);
+}
+
+FVector2D FWaveGenerator::ImaginaryExponent(float Theta)
+{
+	return FVector2D(FMath::Cos(Theta), FMath::Sin(Theta));
+}
+
+FVector2D FWaveGenerator::ComplexMultiply(FVector2D A, FVector2D B)
+{
+	return FVector2D(A.X * B.X - A.Y * B.Y, A.X * B.Y + A.Y * B.X);
 }
 
 
