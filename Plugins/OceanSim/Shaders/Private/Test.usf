@@ -1,9 +1,12 @@
+Texture2D<float4> InputTexture;
 RWTexture2D<float4> OutputTexture;
 int2 OutputTextureSize;
 
 [numthreads(32, 32, 1)]
 void main( uint3 id : SV_DispatchThreadID )
 {
-	float2 RedGreen = float2(id.xy) / float2(OutputTextureSize);
-	OutputTexture[id.xy] = float4(RedGreen, 0, 1);
+    // 
+    float2 RedGreen = float2(id.xy) / float2(OutputTextureSize);
+    float NoiseValue = abs(InputTexture[id.xy].r);
+	OutputTexture[id.xy] = float4(RedGreen, NoiseValue, 1);
 }

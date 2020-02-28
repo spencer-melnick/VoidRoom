@@ -13,4 +13,5 @@ private:
 	FIntPoint BufferSize;
 	FStructuredBufferRHIRef InitialComponentsBuffer;
 	FUnorderedAccessViewRHIRef InitialComponentsBufferUAV;
+	TArray<FFloat16> InputData;
 };
