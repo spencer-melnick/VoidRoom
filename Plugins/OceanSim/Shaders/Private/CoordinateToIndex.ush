@@ -1,0 +1,8 @@
+#pragma once
+
+int2 BufferSize;
+
+uint CoordinateToIndex(uint2 Coordinate)
+{
+    return Coordinate.y * uint(BufferSize.x) + Coordinate.x;
+}

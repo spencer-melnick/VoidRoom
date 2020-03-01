@@ -19,7 +19,7 @@ public:
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_SRV(Texture2D<float4>, InitialComponents)
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
+		SHADER_PARAMETER_RDG_BUFFER_UAV(RWStructuredBuffer<float2>, OutputBuffer)
 		SHADER_PARAMETER(float, Time)
 		SHADER_PARAMETER_STRUCT_INCLUDE(FOceanShaderCommonParameters, CommonParameters)
 	END_SHADER_PARAMETER_STRUCT()

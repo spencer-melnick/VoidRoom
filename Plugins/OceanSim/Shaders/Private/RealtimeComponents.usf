@@ -1,7 +1,7 @@
 #include "/OceanShaders/Private/Common.ush"
 
 Texture2D<float4> InitialComponents;
-RWTexture2D<float4> OutputTexture;
+RWStructuredBuffer<float2> OutputBuffer;
 
 float Time;
 
@@ -19,5 +19,5 @@ void main( uint3 id : SV_DispatchThreadID )
 	float2 Complex1 = ImaginaryExponent(w * Time);
 	float2 Complex2 = ImaginaryExponent(-w * Time);
 
-    OutputTexture[id.xy] = float4(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2), 0, 1);
+    OutputBuffer[CoordinateToIndex(id.xy)] = float4(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2), 0, 1);
 }

@@ -13,7 +13,7 @@ void AWaveGeneratorActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	WaveGenerator.Initialize(FIntPoint(256, 256));
+	WaveGenerator.Initialize(256);
 	WaveGenerator.BeginRendering();
 }
 

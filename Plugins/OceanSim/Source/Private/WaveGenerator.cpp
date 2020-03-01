@@ -9,7 +9,9 @@
 #include "BoxMullerShader.h"
 #include "InitialComponentsShader.h"
 #include "RealtimeComponentsShader.h"
+#include "ButterflyShader.h"
 #include "CopyShader.h"
+#include "BitReverseCopyShader.h"
 
 FWaveGenerator::~FWaveGenerator()
 {
@@ -18,12 +20,15 @@ FWaveGenerator::~FWaveGenerator()
 }
 
 
-void FWaveGenerator::Initialize(FIntPoint Dimensions)
+void FWaveGenerator::Initialize(uint32 LengthInPoints)
 {
-	BufferSize = Dimensions;
+	Length = LengthInPoints;
+	NumSteps = static_cast<uint32>(FMath::RoundToInt(FMath::Log2(Length)));
+	BufferSize = FIntPoint(Length, Length);
 	StartTime = GRenderingRealtimeClock.GetCurrentTime();
 
 	GenerateGaussianNoise();
+	GenerateBitReversal();
 	CalculateButterflyOperations();
 }
 
@@ -79,6 +84,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	CommonParameters.WindSpeed = 40;
 	CommonParameters.WindDirection = FVector2D(1, 1).GetSafeNormal(0.001);
 
+	// Do initial component generation if any parameters have changed
 	if (!bAreParametersUpToDate)
 	{
 		FInitialComponentsShader::FParameters* InitialPassParameters = GraphBuilder.AllocParameters<FInitialComponentsShader::FParameters>();
@@ -109,21 +115,55 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		bAreParametersUpToDate = true;
 	}
 
+	// Generate realtime components
 	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FRealtimeComponentsShader::ThreadsPerGroupDimension);
 
-	FRDGTextureDesc ComponentsTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black,
-		TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false);
-	FRDGTextureRef ComponentsTexture = GraphBuilder.CreateTexture(ComponentsTextureDesc, TEXT("WaveHeightComponentsTexture"));
+	FRDGBufferDesc ComponentsBufferDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(uint32), Length * Length);
+	FRDGBufferRef ComponentsBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveHeightComponentsBuffer"));
+	FRDGBufferUAVRef ComponentsBufferUAV = GraphBuilder.CreateUAV(ComponentsBuffer);
 
 	FRealtimeComponentsShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FRealtimeComponentsShader::FParameters>();
 	PassParameters->InitialComponents = InitialComponentsTextureSRV;
-	PassParameters->OutputTexture = GraphBuilder.CreateUAV(ComponentsTexture);
+	PassParameters->OutputBuffer = ComponentsBufferUAV;
 	PassParameters->CommonParameters = CommonParameters;
 	PassParameters->Time = GRenderingRealtimeClock.GetCurrentTime() - StartTime;
 
 	TShaderMapRef<FRealtimeComponentsShader> ComponentsShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Realtime Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
+
+	// Vertical FFT
+	{
+		// Do a bit reverse copy for the (I)FFT
+		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FBitReverseCopyShaderVertical::ThreadsPerGroupDimension);
+
+		auto CopyPassParameters = GraphBuilder.AllocParameters<FBitReverseCopyShaderVertical::FParameters>();
+		CopyPassParameters->DataBuffer = ComponentsBufferUAV;
+		CopyPassParameters->BufferSize = BufferSize;
+		CopyPassParameters->BitReversalLookup = BitReverseBufferSRV;
+		
+		TShaderMapRef<FBitReverseCopyShaderVertical> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Bit Reverse Copy Vertical"), *CopyShader, CopyPassParameters, GroupCount);
+
+
+		// Get vertical shader and group count
+		TShaderMapRef<FButterflyShaderVertical> ButterflyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FButterflyShaderVertical::ThreadsPerGroupDimension);
+
+		// Do a pass for each step of the (I)FFT
+		for (uint32 i = 0; i < NumSteps; i++)
+		{
+			auto ButterflyPassParameters = GraphBuilder.AllocParameters<FButterflyShaderVertical::FParameters>();
+			ButterflyPassParameters->DataBuffer = ComponentsBufferUAV;
+			ButterflyPassParameters->Operations = ButterflyBufferSRV;
+			ButterflyPassParameters->BufferSize = BufferSize;
+			ButterflyPassParameters->OperationStartIndex = i * Length / 2;
+
+			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Vertical IFFT Iteration %i", i), *ButterflyShader, ButterflyPassParameters,
+				GroupCount);
+		}
+	}
 
 	GraphBuilder.Execute();
 }
@@ -206,21 +246,35 @@ void FWaveGenerator::GenerateGaussianNoise()
 	bHasGaussianNoise = true;
 }
 
+void FWaveGenerator::GenerateBitReversal()
+{
+	TResourceArray<uint32> LookupData;
+	LookupData.Init(uint32(), Length / 2);
+
+	for (uint32 i = 0; i < Length / 2; i++)
+	{
+		LookupData[i] = BitReverse(i, NumSteps);
+	}
+
+	FRHIResourceCreateInfo CreateInfo;
+	CreateInfo.ResourceArray = &LookupData;
+	BitReverseBuffer = RHICreateStructuredBuffer(sizeof(uint32), sizeof(uint32) * Length / 2, BUF_ShaderResource, CreateInfo);
+	BitReverseBufferSRV = RHICreateShaderResourceView(BitReverseBuffer);
+}
+
+
 void FWaveGenerator::CalculateButterflyOperations()
 {
-	uint32 Dimension = FMath::Max(BufferSize.X, BufferSize.Y);
-	uint32 Iterations = FMath::LogX(2, Dimension);
-	
 	TResourceArray<FButterflyOperation> Operations;
-	Operations.Init(FButterflyOperation(0, 0, FVector2D(1, 0)), Iterations * Dimension / 2);
+	Operations.Init(FButterflyOperation(0, 0, FVector2D(1, 0)), NumSteps * Length / 2);
 
 	uint32 i = 0;
 	
-	for (uint32 s = 0; s < Iterations; s++)
+	for (uint32 s = 0; s < NumSteps; s++)
 	{
 		uint32 m = static_cast<uint32>(FMath::Pow(2, s + 1));
 		FVector2D wm = ImaginaryExponent(2 * PI / m);
-		for (uint32 k = 0; k < Dimension; k += m)
+		for (uint32 k = 0; k < Length; k += m)
 		{
 			FVector2D w = FVector2D(1, 0);
 			for (uint32 j = 0; j < m / 2; j ++)
@@ -255,6 +309,20 @@ FVector2D FWaveGenerator::ImaginaryExponent(float Theta)
 FVector2D FWaveGenerator::ComplexMultiply(FVector2D A, FVector2D B)
 {
 	return FVector2D(A.X * B.X - A.Y * B.Y, A.X * B.Y + A.Y * B.X);
+}
+
+uint32 FWaveGenerator::BitReverse(uint32 Value, uint32 NumBits)
+{
+	uint32 NewValue = 0;
+	
+	for (uint32 i = 0; i < NumBits; i++)
+	{
+		uint32 j = NumBits - (i + 1);
+		bool BitValue = (Value & (1 << i)) >> i;
+		NewValue |= BitValue << j;
+	}
+
+	return NewValue;
 }
 
 

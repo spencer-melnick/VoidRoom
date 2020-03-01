@@ -1,0 +1,20 @@
+#include "/OceanShaders/Private/CoordinateToIndex.ush"
+
+RWStructuredBuffer<float2> DataBuffer;
+StructuredBuffer<uint> BitReversalLookup;
+
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
+void main(uint3 id : SV_DispatchThreadID)
+{    
+#ifdef DO_FFT_VERTICAL
+    uint IndexA = CoordinateToIndex(uint2(id.x, id.y));
+    uint IndexB = CoordinateToIndex(uint2(id.x, BitReversalLookup[id.y]));
+#elif DO_FFT_HORIZONTAL
+    uint IndexA = CoordinateToIndex(uint2(id.y, id.x));
+    uint IndexB = CoordinateToIndex(uint2(BitReversalLookup[id.y], id.x));
+#endif
+    
+    float2 Temp = DataBuffer[IndexA];
+    DataBuffer[IndexA] = DataBuffer[IndexB];
+    DataBuffer[IndexB] = Temp;
+}

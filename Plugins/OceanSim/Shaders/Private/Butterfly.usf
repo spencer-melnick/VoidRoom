@@ -1,0 +1,48 @@
+#include "/OceanShaders/Private/Complex.ush"
+#include "/OceanShaders/Private/CoordinateToIndex.ush"
+
+struct ButterflyOperation
+{
+    uint IndexA;
+    uint IndexB;
+    float Twiddle;
+};
+
+RWStructuredBuffer<float2> DataBuffer;
+StructuredBuffer<ButterflyOperation> Operations;
+
+uint OperationStartIndex;
+
+/*
+ * In this shader ID.x corresponds to the column/row index, and ID.y corresponds to the
+ * operation id in this particular step of the FFT.
+ *
+ * I.e., for vertical (I)FFTs, ID.x corresponds to the column for the operation, and
+ * the row for the operation is determined by the butterfly operation. In horizontal
+ * (I)FFTs, ID.x corresponds to the row for the operation, and the column for the
+ * operation is determined by the stored butterfly operation.
+ * 
+ * XY texel coordinates are translated into a single index into the DataBuffer, as UE4
+ * does not have support for float4 texture typed loads.
+ */
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
+void main(uint3 id : SV_DispatchThreadID)
+{
+    uint OperationIndex = id.y + OperationStartIndex;
+    ButterflyOperation Operation = Operations[OperationIndex];
+    
+    #ifdef DO_FFT_VERTICAL
+    uint TextureIndexA = CoordinateToIndex(uint2(id.x, Operation.IndexA));
+    uint TextureIndexB = CoordinateToIndex(uint2(id.x, Operation.IndexB));
+    #elif DO_FFT_HORIZONTAL
+    uint TextureIndexA = CoordinateToIndex(uint2(Operation.IndexA, id.x));
+    uint TextureIndexB = CoordinateToIndex(uint2(Operation.IndexB, id.x));
+    #endif
+    
+    
+    float2 U = DataBuffer[TextureIndexA];
+    float2 T = ComplexMultiply(DataBuffer[TextureIndexB], Operation.Twiddle);
+    
+    DataBuffer[TextureIndexA] = float4(U + T, 0, 1);
+    DataBuffer[TextureIndexB] = float4(U - T, 0, 1);
+}

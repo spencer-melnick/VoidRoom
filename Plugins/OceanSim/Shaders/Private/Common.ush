@@ -1,6 +1,8 @@
 #pragma once
 
-int2 BufferSize;
+#include "/OceanShaders/Private/Complex.ush"
+#include "/OceanShaders/Private/CoordinateToIndex.ush"
+
 float Amplitude;
 float PatchLength;
 float Gravity;
@@ -17,19 +19,4 @@ float2 CalculateK(uint2 Index)
 	return float2(kx, ky);
 }
 
-float2 ImaginaryExponent(float theta)
-{
-	return float2(cos(theta), sin(theta));
-}
 
-float2 Conjugate(float2 Complex)
-{
-	return float2(Complex.x, -Complex.y);
-}
-
-float2 ComplexMultiply(float2 Complex1, float2 Complex2)
-{
-	float Real = Complex1.x * Complex2.x - Complex1.y * Complex2.y;
-	float Imaginary = Complex1.x * Complex2.y + Complex1.y * Complex2.x;
-	return float2(Real, Imaginary);
-}
