@@ -112,8 +112,6 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		TShaderMapRef<FCopyShader> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Copy Component Texture Pass"), *CopyShader, CopyPassParameters, GroupCount);
-
-		bAreParametersUpToDate = true;
 	}
 
 	// Generate realtime components
@@ -220,8 +218,26 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 		TShaderMapRef<FScaleInvertShader> ScaleInvertShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
-		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Scale Inversion Pass"), *ScaleInvertShader, ScaleInvertParameters, GroupCount);
+		GraphBuilder.AddPass(RDG_EVENT_NAME("Debug view results"), ScaleInvertParameters, ERDGPassFlags::Compute,
+		[&ScaleInvertShader, &ScaleInvertParameters, GroupCount, &ComponentsBuffer, this](FRHICommandList& RHICmdList)
+		{
+			FComputeShaderUtils::Dispatch(RHICmdList, *ScaleInvertShader, *ScaleInvertParameters, GroupCount);
+
+			if (!bAreParametersUpToDate)
+			{
+				FTexture2DRHIRef OutputTextureRHI = static_cast<FRHITexture2D*>(ScaleInvertParameters->OutputTexture->GetParent()->GetRHI());
+				uint32 Stride;
+				FFloat16 * ReadData = static_cast<FFloat16*>(RHILockTexture2D(OutputTextureRHI, 0, EResourceLockMode::RLM_ReadOnly, Stride, false));
+				for (uint32 i = 0; i < 4 * Length * Length; i++)
+				{
+					UE_LOG(LogTemp, Display, TEXT("%f"), static_cast<float>(ReadData[i]));
+				}
+				RHIUnlockTexture2D(OutputTextureRHI, 0, false);
+			}
+		});
 	}
+
+	bAreParametersUpToDate = true;
 
 	GraphBuilder.Execute();
 }
@@ -317,23 +333,7 @@ void FWaveGenerator::GenerateBitReversal()
 		Swap.IndexA = i;
 		Swap.IndexB = BitReverse(i, NumSteps);
 
-		if (Swap.IndexA == Swap.IndexB)
-		{
-			continue;
-		}
-
-		bool bHasDuplicate = false;
-
-		for (uint32 j = 0; j < Index; j++)
-		{
-			if (LookupData[j].IndexB == i)
-			{
-				bHasDuplicate = true;
-				break;
-			}
-		}
-
-		if (!bHasDuplicate)
+		if (Swap.IndexA < Swap.IndexB)
 		{
 			LookupData[Index++] = Swap;
 		}

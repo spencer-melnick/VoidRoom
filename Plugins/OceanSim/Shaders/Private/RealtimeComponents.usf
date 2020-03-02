@@ -23,5 +23,11 @@ void main( uint3 id : SV_DispatchThreadID )
     
     float2 Component = float2(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2));
 	
-    OutputBuffer[Index] = clamp(Component, float2(-10000, -10000), float2(10000, 10000));
+    OutputBuffer[Index] = float2(0, 0);
+	
+    if (id.x == 0 && id.y == 2)
+    {
+        OutputBuffer[Index] = float2(256 * 256, 0);
+    }
+
 }

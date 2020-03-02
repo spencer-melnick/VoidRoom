@@ -1,7 +1,7 @@
 #include "/OceanShaders/Private/CoordinateToIndex.ush"
 
 RWStructuredBuffer<float2> DataBuffer;
-StructuredBuffer<uint> BitReversalLookup;
+StructuredBuffer<uint2> BitReversalLookup;
 
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
 void main(uint3 id : SV_DispatchThreadID)

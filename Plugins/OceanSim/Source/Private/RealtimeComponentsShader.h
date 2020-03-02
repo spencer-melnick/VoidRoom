@@ -12,7 +12,7 @@
 class FRealtimeComponentsShader : public FGlobalShader
 {
 public:
-	static const int32 ThreadsPerGroupDimension = 32;
+	static const int32 ThreadsPerGroupDimension = 1;
 
 	DECLARE_GLOBAL_SHADER(FRealtimeComponentsShader)
 	SHADER_USE_PARAMETER_STRUCT(FRealtimeComponentsShader, FGlobalShader)
