@@ -14,5 +14,5 @@ void main( uint3 id : SV_DispatchThreadID )
 	float a1 = sqrt(-2 * log(InputNoise.z));
 	float t1 = 2 * Pi * InputNoise.w;
 	
-    OutputTexture[id.xy] = float4(a0 * cos(t0), a0 * sin(t0), a1 * cos(t1), a1 * sin(t1));
+    OutputTexture[id.xy] = clamp(float4(a0 * cos(t0), a0 * sin(t0), a1 * cos(t1), a1 * sin(t1)), -3, 3);
 }

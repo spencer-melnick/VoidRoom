@@ -7,7 +7,13 @@ float Time;
 
 float CalculateDispersion(float2 K)
 {
-	return sqrt(Gravity / length(K));
+    float Magnitude = length(K);
+    if (Magnitude < 0.0001)
+    {
+        Magnitude = 0.0001;
+    }
+	
+    return sqrt(Magnitude * Gravity);
 }
 
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
@@ -19,15 +25,21 @@ void main( uint3 id : SV_DispatchThreadID )
 	float2 Complex1 = ImaginaryExponent(w * Time);
 	float2 Complex2 = ImaginaryExponent(-w * Time);
 	
-    uint Index = CoordinateToIndex(id.xy);
+    float2 Component = ComplexMultiply(Complex1, InitialSample.rg);
+    float2 Component2 = ComplexMultiply(Complex2, Conjugate(InitialSample.ba));
+    float2 Result = Component + Component2;
     
-    float2 Component = float2(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2));
-	
-    OutputBuffer[Index] = float2(0, 0);
-	
-    if (id.x == 0 && id.y == 2)
+    if (isnan(Result.x))
     {
-        OutputBuffer[Index] = float2(256 * 256, 0);
+        Result.x = 0;
+    }
+    
+    if (isnan(Result.y))
+    {
+        Result.y = 0;
     }
 
+    uint Index = CoordinateToIndex(id.xy);
+	
+    OutputBuffer[Index] = Result;
 }

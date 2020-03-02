@@ -5,18 +5,14 @@ RWTexture2D<float4> ComponentTexture;
 
 float Phillips(float2 K)
 {	
-    if (length(K) < 0.001)
-    {
-        return 0;
-    }
-    
     float L = WindSpeed * WindSpeed / Gravity;
 	float l = L / 1000;
 
 	float2 k = normalize(K);
+    float2 w = normalize(WindDirection);
 	float k2 = K.x * K.x + K.y * K.y;
 
-	float kw = dot(k, WindDirection);
+    float kw = dot(k, w);
 
     return Amplitude * exp(-1 / (k2 * L * L)) * pow(kw, 6) * exp(-k2 * l * l) / (k2 * k2);
 }
@@ -28,6 +24,17 @@ void main( uint3 id : SV_DispatchThreadID )
 
 	float2 K = CalculateK(id.xy);
     float Magnitude = sqrt(Phillips(K)) / sqrt(2);
+    float Magnitude2 = sqrt(Phillips(-K)) / sqrt(2);
+    
+    if (isnan(Magnitude))
+    {
+        Magnitude = 0;
+    }
+    
+    if (isnan(Magnitude2))
+    {
+        Magnitude2 = 0;
+    }
 	
-    ComponentTexture[id.xy] = Magnitude * float4(InputNoise.xy, Conjugate(InputNoise.zw));
+    ComponentTexture[id.xy] = float4(Magnitude * InputNoise.xy, Magnitude2 * InputNoise.zw);
 }

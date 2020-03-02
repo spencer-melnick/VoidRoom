@@ -45,6 +45,16 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 U = DataBuffer[TextureIndexA];
     float2 T = ComplexMultiply(DataBuffer[TextureIndexB], Operation.Twiddle);
     
+    #ifdef DO_FFT_VERTICAL
     DataBuffer[TextureIndexA] = U + T;
     DataBuffer[TextureIndexB] = U - T;
+    #endif
+    
+    #ifdef DO_FFT_HORIZONTAL
+    if (OperationStartIndex < 128 * 8)
+    {
+        DataBuffer[TextureIndexA] = U + T;
+        DataBuffer[TextureIndexB] = U - T;
+    }
+    #endif
 }
