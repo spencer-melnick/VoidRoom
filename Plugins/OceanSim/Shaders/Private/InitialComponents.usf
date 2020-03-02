@@ -4,13 +4,13 @@ Texture2D<float4> NoiseTexture;
 RWTexture2D<float4> ComponentTexture;
 
 float Phillips(float2 K)
-{
-    if ((K.x * K.x + K.y * K.y) < 0.000001)
+{	
+    if (length(K) < 0.001)
     {
-        return float2(0, 0);
+        return 0;
     }
-	
-	float L = WindSpeed * WindSpeed / Gravity;
+    
+    float L = WindSpeed * WindSpeed / Gravity;
 	float l = L / 1000;
 
 	float2 k = normalize(K);
@@ -21,13 +21,13 @@ float Phillips(float2 K)
     return Amplitude * exp(-1 / (k2 * L * L)) * pow(kw, 6) * exp(-k2 * l * l) / (k2 * k2);
 }
 
-[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
 void main( uint3 id : SV_DispatchThreadID )
 {
 	float4 InputNoise = NoiseTexture[id.xy];
 
 	float2 K = CalculateK(id.xy);
-    float2 RedGreen = float2(id.xy) / float2(BufferSize);
     float Magnitude = sqrt(Phillips(K)) / sqrt(2);
+	
     ComponentTexture[id.xy] = Magnitude * float4(InputNoise.xy, Conjugate(InputNoise.zw));
 }

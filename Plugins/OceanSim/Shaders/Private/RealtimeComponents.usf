@@ -20,13 +20,8 @@ void main( uint3 id : SV_DispatchThreadID )
 	float2 Complex2 = ImaginaryExponent(-w * Time);
 	
     uint Index = CoordinateToIndex(id.xy);
-
-    OutputBuffer[Index] = float2(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2));
-    bool2 NanValue = isnan(OutputBuffer[Index]);
+    
+    float2 Component = float2(ComplexMultiply(InitialSample.xy, Complex1) + ComplexMultiply(InitialSample.zw, Complex2));
 	
-    if (NanValue.x || NanValue.y)
-    {
-        OutputBuffer[Index] = float2(0, 0);
-    }
-
+    OutputBuffer[Index] = clamp(Component, float2(-10000, -10000), float2(10000, 10000));
 }

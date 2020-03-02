@@ -5,7 +5,7 @@ struct ButterflyOperation
 {
     uint IndexA;
     uint IndexB;
-    float Twiddle;
+    float2 Twiddle;
 };
 
 RWStructuredBuffer<float2> DataBuffer;
@@ -45,6 +45,6 @@ void main(uint3 id : SV_DispatchThreadID)
     float2 U = DataBuffer[TextureIndexA];
     float2 T = ComplexMultiply(DataBuffer[TextureIndexB], Operation.Twiddle);
     
-    DataBuffer[TextureIndexA] = float4(U + T, 0, 1);
-    DataBuffer[TextureIndexB] = float4(U - T, 0, 1);
+    DataBuffer[TextureIndexA] = U + T;
+    DataBuffer[TextureIndexB] = U - T;
 }

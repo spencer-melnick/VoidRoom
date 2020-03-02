@@ -13,7 +13,7 @@ void main(uint3 id : SV_DispatchThreadID)
         Factor = -Factor;
     }
     
-    float Value = abs(DataBuffer[CoordinateToIndex(id.xy)].x * Factor);
+    float Value = clamp(DataBuffer[CoordinateToIndex(id.xy)].x * Factor, 0, 1);
     
     OutputTexture[id.xy] = float4(Value, Value, Value, 1);
 }
