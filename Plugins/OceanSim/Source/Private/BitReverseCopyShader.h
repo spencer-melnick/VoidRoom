@@ -20,7 +20,7 @@ public:
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_RDG_BUFFER_UAV(float2, DataBuffer)
-		SHADER_PARAMETER_SRV(uint, BitReversalLookup)
+		SHADER_PARAMETER_SRV(uint2, BitReversalLookup)
 		SHADER_PARAMETER(FIntPoint, BufferSize)
 	END_SHADER_PARAMETER_STRUCT()
 
@@ -36,11 +36,11 @@ public:
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_X"), ThreadsPerGroupDimension);
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Y"), ThreadsPerGroupDimension);
 
-		if (FFTDirection == EFFTDirection::FFT_Horizontal)
+		if (FFTDirection == EFFTDirection::FFT_Vertical)
 		{
 			OutEnvironment.SetDefine(TEXT("DO_FFT_VERTICAL"), true);
 		}
-		else if (FFTDirection == EFFTDirection::FFT_Vertical)
+		else if (FFTDirection == EFFTDirection::FFT_Horizontal)
 		{
 			OutEnvironment.SetDefine(TEXT("DO_FFT_HORIZONTAL"), true);
 		}

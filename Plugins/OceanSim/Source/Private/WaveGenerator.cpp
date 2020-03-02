@@ -12,6 +12,7 @@
 #include "ButterflyShader.h"
 #include "CopyShader.h"
 #include "BitReverseCopyShader.h"
+#include "ScaleInvertShader.h"
 
 FWaveGenerator::~FWaveGenerator()
 {
@@ -118,7 +119,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	// Generate realtime components
 	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FRealtimeComponentsShader::ThreadsPerGroupDimension);
 
-	FRDGBufferDesc ComponentsBufferDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(uint32), Length * Length);
+	FRDGBufferDesc ComponentsBufferDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(float) * 2, Length * Length);
 	FRDGBufferRef ComponentsBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveHeightComponentsBuffer"));
 	FRDGBufferUAVRef ComponentsBufferUAV = GraphBuilder.CreateUAV(ComponentsBuffer);
 
@@ -141,7 +142,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		CopyPassParameters->DataBuffer = ComponentsBufferUAV;
 		CopyPassParameters->BufferSize = BufferSize;
 		CopyPassParameters->BitReversalLookup = BitReverseBufferSRV;
-		
+
 		TShaderMapRef<FBitReverseCopyShaderVertical> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Bit Reverse Copy Vertical"), *CopyShader, CopyPassParameters, GroupCount);
@@ -163,6 +164,63 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Vertical IFFT Iteration %i", i), *ButterflyShader, ButterflyPassParameters,
 				GroupCount);
 		}
+	}
+
+	// Horizontal FFT
+	{
+		// Do a bit reverse copy for the (I)FFT
+		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FBitReverseCopyShaderHorizontal::ThreadsPerGroupDimension);
+
+		auto CopyPassParameters = GraphBuilder.AllocParameters<FBitReverseCopyShaderHorizontal::FParameters>();
+		CopyPassParameters->DataBuffer = ComponentsBufferUAV;
+		CopyPassParameters->BufferSize = BufferSize;
+		CopyPassParameters->BitReversalLookup = BitReverseBufferSRV;
+
+		TShaderMapRef<FBitReverseCopyShaderHorizontal> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Bit Reverse Copy Vertical"), *CopyShader, CopyPassParameters, GroupCount);
+
+
+		// Get horizontal shader and group count
+		TShaderMapRef<FButterflyShaderHorizontal> ButterflyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FButterflyShaderHorizontal::ThreadsPerGroupDimension);
+
+		// Do a pass for each step of the (I)FFT
+		for (uint32 i = 0; i < NumSteps; i++)
+		{
+			auto ButterflyPassParameters = GraphBuilder.AllocParameters<FButterflyShaderHorizontal::FParameters>();
+			ButterflyPassParameters->DataBuffer = ComponentsBufferUAV;
+			ButterflyPassParameters->Operations = ButterflyBufferSRV;
+			ButterflyPassParameters->BufferSize = BufferSize;
+			ButterflyPassParameters->OperationStartIndex = i * Length / 2;
+
+			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Vertical IFFT Iteration %i", i), *ButterflyShader, ButterflyPassParameters,
+				GroupCount);
+		}
+	}
+	
+
+	{	
+		// Scale and invert results as appropriate to get the height texture
+
+		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length), FScaleInvertShader::ThreadsPerGroupDimension);
+
+		FRDGTextureDesc HeightTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black, TexCreate_None,
+			TexCreate_ShaderResource | TexCreate_UAV, false);
+		FRDGTextureRef HeightTexture = GraphBuilder.CreateTexture(HeightTextureDesc, TEXT("WaveHeightTexture"));
+		FRDGTextureUAVRef HeightTextureUAV = GraphBuilder.CreateUAV(HeightTexture);
+
+		FRDGBufferSRVDesc ComponentsBufferSRVDesc(ComponentsBuffer);
+		FRDGBufferSRVRef ComponentsBufferSRV = GraphBuilder.CreateSRV(ComponentsBufferSRVDesc);
+
+		auto* ScaleInvertParameters = GraphBuilder.AllocParameters<FScaleInvertShader::FParameters>();
+		ScaleInvertParameters->DataBuffer = ComponentsBufferSRV;
+		ScaleInvertParameters->OutputTexture = HeightTextureUAV;
+		ScaleInvertParameters->BufferSize = BufferSize;
+
+		TShaderMapRef<FScaleInvertShader> ScaleInvertShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Scale Inversion Pass"), *ScaleInvertShader, ScaleInvertParameters, GroupCount);
 	}
 
 	GraphBuilder.Execute();
@@ -248,17 +306,44 @@ void FWaveGenerator::GenerateGaussianNoise()
 
 void FWaveGenerator::GenerateBitReversal()
 {
-	TResourceArray<uint32> LookupData;
-	LookupData.Init(uint32(), Length / 2);
+	TResourceArray<FSwapIndex> LookupData;
+	LookupData.Init(FSwapIndex(), Length / 2);
 
-	for (uint32 i = 0; i < Length / 2; i++)
+	uint32 Index = 0;
+
+	for (uint32 i = 0; i < Length; i++)
 	{
-		LookupData[i] = BitReverse(i, NumSteps);
+		FSwapIndex Swap;
+		Swap.IndexA = i;
+		Swap.IndexB = BitReverse(i, NumSteps);
+
+		if (Swap.IndexA == Swap.IndexB)
+		{
+			continue;
+		}
+
+		bool bHasDuplicate = false;
+
+		for (uint32 j = 0; j < Index; j++)
+		{
+			if (LookupData[j].IndexB == i)
+			{
+				bHasDuplicate = true;
+				break;
+			}
+		}
+
+		if (!bHasDuplicate)
+		{
+			LookupData[Index++] = Swap;
+		}
 	}
+
+	UE_LOG(LogTemp, Display, TEXT("Generated %i unique bit-reversed swaps"), Index);
 
 	FRHIResourceCreateInfo CreateInfo;
 	CreateInfo.ResourceArray = &LookupData;
-	BitReverseBuffer = RHICreateStructuredBuffer(sizeof(uint32), sizeof(uint32) * Length / 2, BUF_ShaderResource, CreateInfo);
+	BitReverseBuffer = RHICreateStructuredBuffer(sizeof(FSwapIndex), sizeof(FSwapIndex) * Length / 2, BUF_ShaderResource, CreateInfo);
 	BitReverseBufferSRV = RHICreateShaderResourceView(BitReverseBuffer);
 }
 

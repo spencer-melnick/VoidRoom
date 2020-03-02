@@ -24,6 +24,12 @@ private:
 		uint32 IndexB;
 		FVector2D Twiddle;
 	};
+
+	struct FSwapIndex
+	{
+		uint32 IndexA;
+		uint32 IndexB;
+	};
 	
 	void OnRender(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext);
 	void GenerateGaussianNoise();

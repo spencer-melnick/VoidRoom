@@ -6,13 +6,18 @@ StructuredBuffer<uint> BitReversalLookup;
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {    
-#ifdef DO_FFT_VERTICAL
-    uint IndexA = CoordinateToIndex(uint2(id.x, id.y));
-    uint IndexB = CoordinateToIndex(uint2(id.x, BitReversalLookup[id.y]));
-#elif DO_FFT_HORIZONTAL
-    uint IndexA = CoordinateToIndex(uint2(id.y, id.x));
-    uint IndexB = CoordinateToIndex(uint2(BitReversalLookup[id.y], id.x));
-#endif
+    uint2 Indices = BitReversalLookup[id.y];
+    
+    #ifdef DO_FFT_VERTICAL
+        uint2 CoordinateA = uint2(id.x, Indices.x);
+        uint2 CoordinateB = uint2(id.x, Indices.y);
+    #elif DO_FFT_HORIZONTAL
+        uint2 CoordinateA = uint2(Indices.x, id.x);
+        uint2 CoordinateB = uint2(Indices.y, id.x);
+    #endif
+    
+    uint IndexA = CoordinateToIndex(CoordinateA);
+    uint IndexB = CoordinateToIndex(CoordinateB);
     
     float2 Temp = DataBuffer[IndexA];
     DataBuffer[IndexA] = DataBuffer[IndexB];

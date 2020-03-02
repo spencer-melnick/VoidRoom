@@ -32,13 +32,15 @@ void main(uint3 id : SV_DispatchThreadID)
     ButterflyOperation Operation = Operations[OperationIndex];
     
     #ifdef DO_FFT_VERTICAL
-    uint TextureIndexA = CoordinateToIndex(uint2(id.x, Operation.IndexA));
-    uint TextureIndexB = CoordinateToIndex(uint2(id.x, Operation.IndexB));
+    uint2 CoordinateA = uint2(id.x, Operation.IndexA);
+    uint2 CoordinateB = uint2(id.x, Operation.IndexB);
     #elif DO_FFT_HORIZONTAL
-    uint TextureIndexA = CoordinateToIndex(uint2(Operation.IndexA, id.x));
-    uint TextureIndexB = CoordinateToIndex(uint2(Operation.IndexB, id.x));
+    uint2 CoordinateA = uint2(Operation.IndexA, id.x);
+    uint2 CoordinateB = uint2(Operation.IndexB, id.x);
     #endif
     
+    uint TextureIndexA = CoordinateToIndex(CoordinateA);
+    uint TextureIndexB = CoordinateToIndex(CoordinateB);
     
     float2 U = DataBuffer[TextureIndexA];
     float2 T = ComplexMultiply(DataBuffer[TextureIndexB], Operation.Twiddle);
