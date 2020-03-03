@@ -28,16 +28,6 @@ void main( uint3 id : SV_DispatchThreadID )
     float2 Component = ComplexMultiply(Complex1, InitialSample.rg);
     float2 Component2 = ComplexMultiply(Complex2, Conjugate(InitialSample.ba));
     float2 Result = Component + Component2;
-    
-    if (isnan(Result.x))
-    {
-        Result.x = 0;
-    }
-    
-    if (isnan(Result.y))
-    {
-        Result.y = 0;
-    }
 
     uint Index = CoordinateToIndex(id.xy);
 	

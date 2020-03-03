@@ -6,7 +6,7 @@ RWTexture2D<float4> ComponentTexture;
 float Phillips(float2 K)
 {	
     float L = WindSpeed * WindSpeed / Gravity;
-	float l = L / 1000;
+	float l = L / 2000;
 
 	float2 k = normalize(K);
     float2 w = normalize(WindDirection);
