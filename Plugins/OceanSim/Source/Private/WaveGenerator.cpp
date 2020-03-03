@@ -5,6 +5,7 @@
 #include "RenderGraphBuilder.h"
 #include "PixelShaderUtils.h"
 #include "Containers/DynamicRHIResourceArray.h"
+#include "RenderTargetPool.h"
 
 #include "BoxMullerShader.h"
 #include "InitialComponentsShader.h"
@@ -21,7 +22,7 @@ FWaveGenerator::~FWaveGenerator()
 }
 
 
-void FWaveGenerator::Initialize(uint32 LengthInPoints)
+void FWaveGenerator::Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* Target)
 {
 	Length = LengthInPoints;
 	NumSteps = static_cast<uint32>(FMath::RoundToInt(FMath::Log2(Length)));
@@ -31,6 +32,10 @@ void FWaveGenerator::Initialize(uint32 LengthInPoints)
 	GenerateGaussianNoise();
 	GenerateBitReversal();
 	CalculateButterflyOperations();
+
+	bAreParametersUpToDate = false;
+
+	RenderTarget = Target;
 }
 
 void FWaveGenerator::BeginRendering()
@@ -67,6 +72,11 @@ void FWaveGenerator::StopRendering()
 	ResolvedSceneColorHandle.Reset();
 }
 
+UTextureRenderTarget2D* FWaveGenerator::GetRenderTarget() const
+{
+	return RenderTarget;
+}
+
 void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext)
 {	
 	if (!InitialComponentsTexture.IsValid())
@@ -99,19 +109,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Initial Wave Height Component Generation"),
 			*ComputeShader, InitialPassParameters, GroupCount);
 
-		FRDGTextureDesc OutputTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::BlackMaxAlpha,
-			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable, false);
-		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("ComponentDebugTexture"));
-
-		FCopyShader::FParameters* CopyPassParameters = GraphBuilder.AllocParameters<FCopyShader::FParameters>();
-		CopyPassParameters->InputTexture = InitialComponentsTextureSRV;
-		CopyPassParameters->OutputTexture = GraphBuilder.CreateUAV(OutputTexture);
-		CopyPassParameters->Bias = 0;
-		CopyPassParameters->Scale = 1;
-
-		TShaderMapRef<FCopyShader> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Copy Component Texture Pass"), *CopyShader, CopyPassParameters, GroupCount);
+		bAreParametersUpToDate = true;
 	}
 
 	// Generate realtime components
@@ -129,7 +127,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 	TShaderMapRef<FRealtimeComponentsShader> ComponentsShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
-	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Realtime Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
 
 	// Vertical FFT
 	{
@@ -203,41 +201,41 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length), FScaleInvertShader::ThreadsPerGroupDimension);
 
-		FRDGTextureDesc HeightTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black, TexCreate_None,
-			TexCreate_ShaderResource | TexCreate_UAV, false);
+		FRDGTextureDesc HeightTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black,
+			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false);
 		FRDGTextureRef HeightTexture = GraphBuilder.CreateTexture(HeightTextureDesc, TEXT("WaveHeightTexture"));
-		FRDGTextureUAVRef HeightTextureUAV = GraphBuilder.CreateUAV(HeightTexture);
 
 		FRDGBufferSRVDesc ComponentsBufferSRVDesc(ComponentsBuffer);
 		FRDGBufferSRVRef ComponentsBufferSRV = GraphBuilder.CreateSRV(ComponentsBufferSRVDesc);
 
 		auto* ScaleInvertParameters = GraphBuilder.AllocParameters<FScaleInvertShader::FParameters>();
 		ScaleInvertParameters->DataBuffer = ComponentsBufferSRV;
-		ScaleInvertParameters->OutputTexture = HeightTextureUAV;
+		ScaleInvertParameters->OutputTexture = GraphBuilder.CreateUAV(HeightTexture);
 		ScaleInvertParameters->BufferSize = BufferSize;
 
 		TShaderMapRef<FScaleInvertShader> ScaleInvertShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
-		GraphBuilder.AddPass(RDG_EVENT_NAME("Debug view results"), ScaleInvertParameters, ERDGPassFlags::Compute,
-		[&ScaleInvertShader, &ScaleInvertParameters, GroupCount, &ComponentsBuffer, this](FRHICommandList& RHICmdList)
-		{
-			FComputeShaderUtils::Dispatch(RHICmdList, *ScaleInvertShader, *ScaleInvertParameters, GroupCount);
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Scale Invert IFFT Pass"), *ScaleInvertShader, ScaleInvertParameters, GroupCount);
 
-			if (!bAreParametersUpToDate)
-			{
-				FTexture2DRHIRef OutputTextureRHI = static_cast<FRHITexture2D*>(ScaleInvertParameters->OutputTexture->GetParent()->GetRHI());
-				uint32 Stride;
-				FFloat16 * ReadData = static_cast<FFloat16*>(RHILockTexture2D(OutputTextureRHI, 0, EResourceLockMode::RLM_ReadOnly, Stride, false));
-				for (uint32 i = 0; i < 4 * Length * Length; i++)
-				{
-					UE_LOG(LogTemp, Display, TEXT("%f"), static_cast<float>(ReadData[i]));
-				}
-				RHIUnlockTexture2D(OutputTextureRHI, 0, false);
-			}
-		});
+
+		// Extract the texture from the graph
+		FRenderTarget* RenderTargetResource = RenderTarget->GetRenderTargetResource();
+		FTexture2DRHIRef RenderTargetRHI = RenderTargetResource->GetRenderTargetTexture();
+
+		FSceneRenderTargetItem RenderTargetItem;
+		RenderTargetItem.TargetableTexture = RenderTargetRHI;
+		RenderTargetItem.ShaderResourceTexture = RenderTargetRHI;
+
+		FPooledRenderTargetDesc RenderTargetDesc = FPooledRenderTargetDesc::Create2DDesc(RenderTargetResource->GetSizeXY(),
+			RenderTargetRHI->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable |
+			TexCreate_ShaderResource | TexCreate_UAV, false);
+		TRefCountPtr<IPooledRenderTarget> PooledRenderTarget;
+		GRenderTargetPool.CreateUntrackedElement(RenderTargetDesc, PooledRenderTarget, RenderTargetItem);
+
+		FRDGTextureRef RenderTargetRDG = GraphBuilder.RegisterExternalTexture(PooledRenderTarget, TEXT("WaveHeightRenderTarget"));
+
+		AddCopyTexturePass(GraphBuilder, HeightTexture, RenderTargetRDG);
 	}
-
-	bAreParametersUpToDate = true;
 
 	GraphBuilder.Execute();
 }

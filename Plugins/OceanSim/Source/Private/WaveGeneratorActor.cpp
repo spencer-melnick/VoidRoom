@@ -3,6 +3,9 @@
 
 #include "WaveGeneratorActor.h"
 
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInstanceDynamic.h"
+
 // Sets default values
 AWaveGeneratorActor::AWaveGeneratorActor()
 {
@@ -13,7 +16,7 @@ void AWaveGeneratorActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	WaveGenerator.Initialize(256);
+	WaveGenerator.Initialize(256, RenderTarget);
 	WaveGenerator.BeginRendering();
 }
 

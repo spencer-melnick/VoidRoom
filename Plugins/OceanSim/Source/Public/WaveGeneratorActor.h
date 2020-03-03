@@ -16,6 +16,9 @@ class OCEANSIM_API AWaveGeneratorActor : public AActor
 public:	
 	AWaveGeneratorActor();
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UTextureRenderTarget2D* RenderTarget;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

@@ -3,15 +3,20 @@
 #include "CoreMinimal.h"
 
 #include "RHI.h"
+#include "Engine/TextureRenderTarget2D.h"
+
+#include "WaveGenerator.h"
 
 class FWaveGenerator
 {
 public:
 	~FWaveGenerator();
 	
-	void Initialize(uint32 LengthInPoints);
+	void Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* Target);
 	void BeginRendering();
 	void StopRendering();
+
+	UTextureRenderTarget2D* GetRenderTarget() const;
 
 private:
 	struct FButterflyOperation
@@ -51,6 +56,8 @@ private:
 
 	
 	// Textures / Buffers
+	UTextureRenderTarget2D* RenderTarget;
+
 	FTexture2DRHIRef GaussianNoiseTexture;
 	FShaderResourceViewRHIRef GaussianNoiseTextureSRV;
 	
