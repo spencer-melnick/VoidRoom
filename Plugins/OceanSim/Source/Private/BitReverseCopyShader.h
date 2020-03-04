@@ -7,9 +7,9 @@
 #include "ShaderParameterUtils.h"
 #include "ShaderParameterStruct.h"
 
-#include "CommonShaderParameters.h"
+#include "WaveGenerator.h"
 
-template <EFFTDirection FFTDirection>
+template <FWaveGenerator::EFFTDirection FFTDirection>
 class FBitReverseCopyShader : public FGlobalShader
 {
 public:
@@ -36,20 +36,20 @@ public:
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_X"), ThreadsPerGroupDimension);
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Y"), ThreadsPerGroupDimension);
 
-		if (FFTDirection == EFFTDirection::FFT_Vertical)
+		if (FFTDirection == FWaveGenerator::EFFTDirection::FFT_Vertical)
 		{
 			OutEnvironment.SetDefine(TEXT("DO_FFT_VERTICAL"), true);
 		}
-		else if (FFTDirection == EFFTDirection::FFT_Horizontal)
+		else if (FFTDirection == FWaveGenerator::EFFTDirection::FFT_Horizontal)
 		{
 			OutEnvironment.SetDefine(TEXT("DO_FFT_HORIZONTAL"), true);
 		}
 	}
 };
 
-using FBitReverseCopyShaderHorizontal = FBitReverseCopyShader<EFFTDirection::FFT_Horizontal>;
-using FBitReverseCopyShaderVertical = FBitReverseCopyShader<EFFTDirection::FFT_Vertical>;
+using FBitReverseCopyShaderHorizontal = FBitReverseCopyShader<FWaveGenerator::EFFTDirection::FFT_Horizontal>;
+using FBitReverseCopyShaderVertical = FBitReverseCopyShader<FWaveGenerator::EFFTDirection::FFT_Vertical>;
 
-IMPLEMENT_GLOBAL_SHADER(FBitReverseCopyShader<EFFTDirection::FFT_Horizontal>, "/OceanShaders/Private/BitReverseCopy.usf", "main", SF_Compute);
-IMPLEMENT_GLOBAL_SHADER(FBitReverseCopyShader<EFFTDirection::FFT_Vertical>, "/OceanShaders/Private/BitReverseCopy.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FBitReverseCopyShader<FWaveGenerator::EFFTDirection::FFT_Horizontal>, "/OceanShaders/Private/BitReverseCopy.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FBitReverseCopyShader<FWaveGenerator::EFFTDirection::FFT_Vertical>, "/OceanShaders/Private/BitReverseCopy.usf", "main", SF_Compute);
 

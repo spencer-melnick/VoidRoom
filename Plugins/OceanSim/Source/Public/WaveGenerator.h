@@ -4,17 +4,34 @@
 
 #include "RHI.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "RenderGraphBuilder.h"
 
 #include "WaveGenerator.h"
 
 class FWaveGenerator
 {
 public:
+	enum class EFFTDirection
+	{
+		FFT_Horizontal,
+		FFT_Vertical
+	};
+	
+	struct FGenerationParameters
+	{
+		float Amplitude = 1;
+		float PatchLength = 1000;
+		float Gravity = 9.81;
+		float WindSpeed = 40;
+		FVector2D WindDirection = FVector2D(1, 0);
+	};
+	
 	~FWaveGenerator();
 	
 	void Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* Target);
 	void BeginRendering();
 	void StopRendering();
+	void SetParameters(FGenerationParameters NewParameters);
 
 	UTextureRenderTarget2D* GetRenderTarget() const;
 
@@ -40,6 +57,9 @@ private:
 	void GenerateGaussianNoise();
 	void GenerateBitReversal();
 	void CalculateButterflyOperations();
+
+	template<EFFTDirection Direction>
+	void DoFFT(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet);
 	
 	static FVector2D ImaginaryExponent(float Theta);
 	static FVector2D ComplexMultiply(FVector2D A, FVector2D B);
@@ -47,6 +67,8 @@ private:
 
 
 	// Shader variables
+	FCriticalSection ParameterLock;
+	FGenerationParameters GenerationParameters;
 	bool bHasGaussianNoise = false;
 	bool bAreParametersUpToDate = false;
 	uint32 Length = 0;
@@ -56,7 +78,7 @@ private:
 
 	
 	// Textures / Buffers
-	UTextureRenderTarget2D* RenderTarget;
+	UTextureRenderTarget2D* RenderTarget = nullptr;
 
 	FTexture2DRHIRef GaussianNoiseTexture;
 	FShaderResourceViewRHIRef GaussianNoiseTextureSRV;

@@ -7,9 +7,9 @@
 #include "ShaderParameterUtils.h"
 #include "ShaderParameterStruct.h"
 
-#include "CommonShaderParameters.h"
+#include "WaveGenerator.h"
 
-template <EFFTDirection FFTDirection>
+template <FWaveGenerator::EFFTDirection FFTDirection>
 class FButterflyShader : public FGlobalShader
 {
 public:
@@ -37,19 +37,19 @@ public:
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_X"), ThreadsPerGroupDimension);
 		OutEnvironment.SetDefine(TEXT("THREADGROUPSIZE_Y"), ThreadsPerGroupDimension);
 
-		if (FFTDirection == EFFTDirection::FFT_Vertical)
+		if (FFTDirection == FWaveGenerator::EFFTDirection::FFT_Vertical)
 		{
 			OutEnvironment.SetDefine(TEXT("DO_FFT_VERTICAL"), true);
 		}
-		else if (FFTDirection == EFFTDirection::FFT_Horizontal)
+		else if (FFTDirection == FWaveGenerator::EFFTDirection::FFT_Horizontal)
 		{
 			OutEnvironment.SetDefine(TEXT("DO_FFT_HORIZONTAL"), true);
 		}
 	}
 };
 
-using FButterflyShaderHorizontal = FButterflyShader<EFFTDirection::FFT_Horizontal>;
-using FButterflyShaderVertical = FButterflyShader<EFFTDirection::FFT_Vertical>;
+using FButterflyShaderHorizontal = FButterflyShader<FWaveGenerator::EFFTDirection::FFT_Horizontal>;
+using FButterflyShaderVertical = FButterflyShader<FWaveGenerator::EFFTDirection::FFT_Vertical>;
 
-IMPLEMENT_GLOBAL_SHADER(FButterflyShader<EFFTDirection::FFT_Horizontal>, "/OceanShaders/Private/Butterfly.usf", "main", SF_Compute);
-IMPLEMENT_GLOBAL_SHADER(FButterflyShader<EFFTDirection::FFT_Vertical>, "/OceanShaders/Private/Butterfly.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FButterflyShader<FWaveGenerator::EFFTDirection::FFT_Horizontal>, "/OceanShaders/Private/Butterfly.usf", "main", SF_Compute);
+IMPLEMENT_GLOBAL_SHADER(FButterflyShader<FWaveGenerator::EFFTDirection::FFT_Vertical>, "/OceanShaders/Private/Butterfly.usf", "main", SF_Compute);

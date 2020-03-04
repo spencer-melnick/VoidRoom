@@ -15,9 +15,3 @@ BEGIN_SHADER_PARAMETER_STRUCT(FOceanShaderCommonParameters, )
 	SHADER_PARAMETER(float, WindSpeed)
 	SHADER_PARAMETER(FVector2D, WindDirection)
 END_SHADER_PARAMETER_STRUCT()
-
-enum class EFFTDirection
-{
-	FFT_Horizontal,
-	FFT_Vertical
-};

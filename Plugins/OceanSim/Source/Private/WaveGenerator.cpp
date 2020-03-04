@@ -72,6 +72,15 @@ void FWaveGenerator::StopRendering()
 	ResolvedSceneColorHandle.Reset();
 }
 
+void FWaveGenerator::SetParameters(FGenerationParameters NewParameters)
+{
+	ParameterLock.Lock();
+	GenerationParameters = NewParameters;
+	bAreParametersUpToDate = false;
+	ParameterLock.Unlock();
+}
+
+
 UTextureRenderTarget2D* FWaveGenerator::GetRenderTarget() const
 {
 	return RenderTarget;
@@ -87,16 +96,24 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 	FRDGBuilder GraphBuilder(RHICmdList);
 
+	// Lock the generation parameters and copy to the shader parameters
+	ParameterLock.Lock();
+	bool bCopyAreParametersUpToDate = bAreParametersUpToDate;
+	
 	FOceanShaderCommonParameters CommonParameters;
 	CommonParameters.BufferSize = BufferSize;
-	CommonParameters.Amplitude = 4;
-	CommonParameters.PatchLength = 1000;
-	CommonParameters.Gravity = 9.81;
-	CommonParameters.WindSpeed = 40;
-	CommonParameters.WindDirection = FVector2D(1, 1).GetSafeNormal(0.001);
+	CommonParameters.Amplitude = GenerationParameters.Amplitude;
+	CommonParameters.PatchLength = GenerationParameters.PatchLength;
+	CommonParameters.Gravity = GenerationParameters.Gravity;
+	CommonParameters.WindSpeed = GenerationParameters.WindSpeed;
+	CommonParameters.WindDirection = GenerationParameters.WindDirection.GetSafeNormal(0.001);
+
+	// No matter what happens, at the end of all the compute passes, the parameters will be up to date
+	bAreParametersUpToDate = true;
+	ParameterLock.Unlock();
 
 	// Do initial component generation if any parameters have changed
-	if (!bAreParametersUpToDate)
+	if (!bCopyAreParametersUpToDate)
 	{
 		FInitialComponentsShader::FParameters* InitialPassParameters = GraphBuilder.AllocParameters<FInitialComponentsShader::FParameters>();
 		InitialPassParameters->NoiseTexture = GaussianNoiseTextureSRV;
@@ -108,8 +125,6 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Initial Wave Height Component Generation"),
 			*ComputeShader, InitialPassParameters, GroupCount);
-
-		bAreParametersUpToDate = true;
 	}
 
 	// Generate realtime components
@@ -129,72 +144,8 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
 
-	// Vertical FFT
-	{
-		// Do a bit reverse copy for the (I)FFT
-		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FBitReverseCopyShaderVertical::ThreadsPerGroupDimension);
-
-		auto CopyPassParameters = GraphBuilder.AllocParameters<FBitReverseCopyShaderVertical::FParameters>();
-		CopyPassParameters->DataBuffer = ComponentsBufferUAV;
-		CopyPassParameters->BufferSize = BufferSize;
-		CopyPassParameters->BitReversalLookup = BitReverseBufferSRV;
-
-		TShaderMapRef<FBitReverseCopyShaderVertical> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Bit Reverse Copy Vertical"), *CopyShader, CopyPassParameters, GroupCount);
-
-
-		// Get vertical shader and group count
-		TShaderMapRef<FButterflyShaderVertical> ButterflyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FButterflyShaderVertical::ThreadsPerGroupDimension);
-
-		// Do a pass for each step of the (I)FFT
-		for (uint32 i = 0; i < NumSteps; i++)
-		{
-			auto ButterflyPassParameters = GraphBuilder.AllocParameters<FButterflyShaderVertical::FParameters>();
-			ButterflyPassParameters->DataBuffer = ComponentsBufferUAV;
-			ButterflyPassParameters->Operations = ButterflyBufferSRV;
-			ButterflyPassParameters->BufferSize = BufferSize;
-			ButterflyPassParameters->OperationStartIndex = i * Length / 2;
-
-			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Vertical IFFT Iteration %i", i), *ButterflyShader, ButterflyPassParameters,
-				GroupCount);
-		}
-	}
-
-	// Horizontal FFT
-	{
-		// Do a bit reverse copy for the (I)FFT
-		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FBitReverseCopyShaderHorizontal::ThreadsPerGroupDimension);
-
-		auto CopyPassParameters = GraphBuilder.AllocParameters<FBitReverseCopyShaderHorizontal::FParameters>();
-		CopyPassParameters->DataBuffer = ComponentsBufferUAV;
-		CopyPassParameters->BufferSize = BufferSize;
-		CopyPassParameters->BitReversalLookup = BitReverseBufferSRV;
-
-		TShaderMapRef<FBitReverseCopyShaderHorizontal> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Bit Reverse Copy Vertical"), *CopyShader, CopyPassParameters, GroupCount);
-
-
-		// Get horizontal shader and group count
-		TShaderMapRef<FButterflyShaderHorizontal> ButterflyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FButterflyShaderHorizontal::ThreadsPerGroupDimension);
-
-		// Do a pass for each step of the (I)FFT
-		for (uint32 i = 0; i < NumSteps; i++)
-		{
-			auto ButterflyPassParameters = GraphBuilder.AllocParameters<FButterflyShaderHorizontal::FParameters>();
-			ButterflyPassParameters->DataBuffer = ComponentsBufferUAV;
-			ButterflyPassParameters->Operations = ButterflyBufferSRV;
-			ButterflyPassParameters->BufferSize = BufferSize;
-			ButterflyPassParameters->OperationStartIndex = i * Length / 2;
-
-			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Vertical IFFT Iteration %i", i), *ButterflyShader, ButterflyPassParameters,
-				GroupCount);
-		}
-	}
-	
+	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, ComponentsBufferUAV);
+	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, ComponentsBufferUAV);
 
 	{	
 		// Scale and invert results as appropriate to get the height texture
@@ -273,7 +224,7 @@ void FWaveGenerator::GenerateGaussianNoise()
 		FUnorderedAccessViewRHIRef GaussianNoiseTextureUAV = RHICreateUnorderedAccessView(GaussianNoiseTexture);
 
 		// Allocate initial components texture
-		InitialComponentsTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_FloatRGBA, 1, 1,
+		InitialComponentsTexture = RHICreateTexture2D(BufferSize.X, BufferSize.Y, PF_A32B32G32R32F, 1, 1,
 			TexCreate_ShaderResource | TexCreate_UAV, CreateInfo);
 		InitialComponentsTextureSRV = RHICreateShaderResourceView(InitialComponentsTexture, 0);
 		InitialComponentsTextureUAV = RHICreateUnorderedAccessView(InitialComponentsTexture);
@@ -406,6 +357,51 @@ uint32 FWaveGenerator::BitReverse(uint32 Value, uint32 NumBits)
 	}
 
 	return NewValue;
+}
+
+template <FWaveGenerator::EFFTDirection Direction>
+void FWaveGenerator::DoFFT(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet)
+{
+	FString DirectionString;
+
+	if (Direction == EFFTDirection::FFT_Vertical)
+	{
+		DirectionString = "Vertical";
+	}
+	else
+	{
+		DirectionString = "Horizontal";
+	}
+	
+	// Do a bit reverse copy for the (I)FFT
+	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FBitReverseCopyShader<Direction>::ThreadsPerGroupDimension);
+
+	auto CopyPassParameters = GraphBuilder.AllocParameters<typename FBitReverseCopyShader<Direction>::FParameters>();
+	CopyPassParameters->DataBuffer = DataSet;
+	CopyPassParameters->BufferSize = BufferSize;
+	CopyPassParameters->BitReversalLookup = BitReverseBufferSRV;
+
+	TShaderMapRef<FBitReverseCopyShader<Direction>> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Bit Reverse Copy %s", *DirectionString), *CopyShader, CopyPassParameters, GroupCount);
+
+
+	// Get shader and group count
+	TShaderMapRef<FButterflyShader<Direction>> ButterflyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FButterflyShader<Direction>::ThreadsPerGroupDimension);
+
+	// Do a pass for each step of the (I)FFT
+	for (uint32 i = 0; i < NumSteps; i++)
+	{
+		auto ButterflyPassParameters = GraphBuilder.AllocParameters<typename FButterflyShader<Direction>::FParameters>();
+		ButterflyPassParameters->DataBuffer = DataSet;
+		ButterflyPassParameters->Operations = ButterflyBufferSRV;
+		ButterflyPassParameters->BufferSize = BufferSize;
+		ButterflyPassParameters->OperationStartIndex = i * Length / 2;
+
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave %s IFFT Iteration %i", *DirectionString, i), *ButterflyShader, ButterflyPassParameters,
+			GroupCount);
+	}
 }
 
 
