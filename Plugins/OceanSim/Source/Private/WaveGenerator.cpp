@@ -22,7 +22,7 @@ FWaveGenerator::~FWaveGenerator()
 }
 
 
-void FWaveGenerator::Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* Target)
+void FWaveGenerator::Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* DisplacementTarget, UTextureRenderTarget2D* SlopeTarget)
 {
 	Length = LengthInPoints;
 	NumSteps = static_cast<uint32>(FMath::RoundToInt(FMath::Log2(Length)));
@@ -35,7 +35,8 @@ void FWaveGenerator::Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* T
 
 	bAreParametersUpToDate = false;
 
-	RenderTarget = Target;
+	DisplacementRenderTarget = DisplacementTarget;
+	SlopeRenderTarget = SlopeTarget;
 }
 
 void FWaveGenerator::BeginRendering()
@@ -80,11 +81,6 @@ void FWaveGenerator::SetParameters(FGenerationParameters NewParameters)
 	ParameterLock.Unlock();
 }
 
-
-UTextureRenderTarget2D* FWaveGenerator::GetRenderTarget() const
-{
-	return RenderTarget;
-}
 
 void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext)
 {	
@@ -135,6 +131,12 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	FRDGBufferRef ComponentsBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveHeightComponentsBuffer"));
 	FRDGBufferUAVRef ComponentsBufferUAV = GraphBuilder.CreateUAV(ComponentsBuffer);
 
+	FRDGBufferRef DisplacementXBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveDisplacementXBuffer"));
+	FRDGBufferUAVRef DisplacementXBufferUAV = GraphBuilder.CreateUAV(DisplacementXBuffer);
+
+	FRDGBufferRef DisplacementYBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveDisplacementYBuffer"));
+	FRDGBufferUAVRef DisplacementYBufferUAV = GraphBuilder.CreateUAV(DisplacementYBuffer);
+
 	FRDGBufferRef SlopeXBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveSlopeXBuffer"));
 	FRDGBufferUAVRef SlopeXBufferUAV = GraphBuilder.CreateUAV(SlopeXBuffer);
 
@@ -144,6 +146,8 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	FRealtimeComponentsShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FRealtimeComponentsShader::FParameters>();
 	PassParameters->InitialComponents = InitialComponentsTextureSRV;
 	PassParameters->HeightComponentsBuffer = ComponentsBufferUAV;
+	PassParameters->DisplacementXBuffer = DisplacementXBufferUAV;
+	PassParameters->DisplacementYBuffer = DisplacementYBufferUAV;
 	PassParameters->SlopeXBuffer = SlopeXBufferUAV;
 	PassParameters->SlopeYBuffer = SlopeYBufferUAV;
 	PassParameters->CommonParameters = CommonParameters;
@@ -153,14 +157,11 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
 
-	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, ComponentsBufferUAV);
-	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, ComponentsBufferUAV);
-
-	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, SlopeXBufferUAV);
-	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, SlopeXBufferUAV);
-
-	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, SlopeYBufferUAV);
-	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, SlopeYBufferUAV);
+	DoFFT2(GraphBuilder, ComponentsBufferUAV);
+	DoFFT2(GraphBuilder, DisplacementXBufferUAV);
+	DoFFT2(GraphBuilder, DisplacementYBufferUAV);
+	DoFFT2(GraphBuilder, SlopeXBufferUAV);
+	DoFFT2(GraphBuilder, SlopeYBufferUAV);
 
 	{	
 		// Scale and invert results as appropriate to get the height texture
@@ -169,10 +170,20 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 		FRDGTextureDesc HeightTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black,
 			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false);
-		FRDGTextureRef HeightTexture = GraphBuilder.CreateTexture(HeightTextureDesc, TEXT("WaveHeightTexture"));
+		FRDGTextureRef HeightTexture = GraphBuilder.CreateTexture(HeightTextureDesc, TEXT("WaveDisplacementTexture"));
+
+		FRDGTextureDesc SlopeTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_G16R16F, FClearValueBinding::Black,
+			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false);
+		FRDGTextureRef SlopeTexture = GraphBuilder.CreateTexture(SlopeTextureDesc, TEXT("WaveSlopeTexture"));
 
 		FRDGBufferSRVDesc ComponentsBufferSRVDesc(ComponentsBuffer);
 		FRDGBufferSRVRef ComponentsBufferSRV = GraphBuilder.CreateSRV(ComponentsBufferSRVDesc);
+
+		FRDGBufferSRVDesc DisplacementXBufferSRVDesc(DisplacementXBuffer);
+		FRDGBufferSRVRef DisplacementXBufferSRV = GraphBuilder.CreateSRV(DisplacementXBufferSRVDesc);
+
+		FRDGBufferSRVDesc DisplacementYBufferSRVDesc(DisplacementYBuffer);
+		FRDGBufferSRVRef DisplacementYBufferSRV = GraphBuilder.CreateSRV(DisplacementYBufferSRVDesc);
 
 		FRDGBufferSRVDesc SlopeXBufferSRVDesc(SlopeXBuffer);
 		FRDGBufferSRVRef SlopeXBufferSRV = GraphBuilder.CreateSRV(SlopeXBufferSRVDesc);
@@ -182,9 +193,12 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 		auto* ScaleInvertParameters = GraphBuilder.AllocParameters<FScaleInvertShader::FParameters>();
 		ScaleInvertParameters->HeightBuffer = ComponentsBufferSRV;
+		ScaleInvertParameters->DisplacementXBuffer = DisplacementXBufferSRV;
+		ScaleInvertParameters->DisplacementYBuffer = DisplacementYBufferSRV;
 		ScaleInvertParameters->SlopeXBuffer = SlopeXBufferSRV;
 		ScaleInvertParameters->SlopeYBuffer = SlopeYBufferSRV;
-		ScaleInvertParameters->OutputTexture = GraphBuilder.CreateUAV(HeightTexture);
+		ScaleInvertParameters->DisplacementTexture = GraphBuilder.CreateUAV(HeightTexture);
+		ScaleInvertParameters->SlopeTexture = GraphBuilder.CreateUAV(SlopeTexture);
 		ScaleInvertParameters->BufferSize = BufferSize;
 
 		TShaderMapRef<FScaleInvertShader> ScaleInvertShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -193,22 +207,14 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 
 		// Extract the texture from the graph
-		FRenderTarget* RenderTargetResource = RenderTarget->GetRenderTargetResource();
-		FTexture2DRHIRef RenderTargetRHI = RenderTargetResource->GetRenderTargetTexture();
+		TRefCountPtr<IPooledRenderTarget> PooledDisplacementTarget = GetPooledRenderTarget(DisplacementRenderTarget);
+		TRefCountPtr<IPooledRenderTarget> PooledSlopeTarget = GetPooledRenderTarget(SlopeRenderTarget);
 
-		FSceneRenderTargetItem RenderTargetItem;
-		RenderTargetItem.TargetableTexture = RenderTargetRHI;
-		RenderTargetItem.ShaderResourceTexture = RenderTargetRHI;
+		FRDGTextureRef DisplacementRenderTargetRDG = GraphBuilder.RegisterExternalTexture(PooledDisplacementTarget, TEXT("WaveDisplacementRenderTarget"));
+		FRDGTextureRef SlopeRenderTargetRDG = GraphBuilder.RegisterExternalTexture(PooledSlopeTarget, TEXT("WaveSlopeRenderTarget"));
 
-		FPooledRenderTargetDesc RenderTargetDesc = FPooledRenderTargetDesc::Create2DDesc(RenderTargetResource->GetSizeXY(),
-			RenderTargetRHI->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable |
-			TexCreate_ShaderResource | TexCreate_UAV, false);
-		TRefCountPtr<IPooledRenderTarget> PooledRenderTarget;
-		GRenderTargetPool.CreateUntrackedElement(RenderTargetDesc, PooledRenderTarget, RenderTargetItem);
-
-		FRDGTextureRef RenderTargetRDG = GraphBuilder.RegisterExternalTexture(PooledRenderTarget, TEXT("WaveHeightRenderTarget"));
-
-		AddCopyTexturePass(GraphBuilder, HeightTexture, RenderTargetRDG);
+		AddCopyTexturePass(GraphBuilder, HeightTexture, DisplacementRenderTargetRDG);
+		AddCopyTexturePass(GraphBuilder, SlopeTexture, SlopeRenderTargetRDG);
 	}
 
 	GraphBuilder.Execute();
@@ -266,22 +272,6 @@ void FWaveGenerator::GenerateGaussianNoise()
 		TShaderMapRef<FBoxMullerShader> BoxMullerShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
 		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Box Muller Pass"), *BoxMullerShader, BoxMullerPassParameters, GroupCount);
-
-		
-		// Create a debug output texture
-		FRDGTextureDesc OutputTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::BlackMaxAlpha,
-			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV | TexCreate_RenderTargetable, false);
-		FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("GaussianNoiseDebugTexture"));
-
-		FCopyShader::FParameters* CopyPassParameters = GraphBuilder.AllocParameters<FCopyShader::FParameters>();
-		CopyPassParameters->InputTexture = GaussianNoiseTextureSRV;
-		CopyPassParameters->OutputTexture = GraphBuilder.CreateUAV(OutputTexture);
-		CopyPassParameters->Bias = 0.5;
-		CopyPassParameters->Scale = 1 / 2.5;
-
-		TShaderMapRef<FCopyShader> CopyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Copy Gaussian Texture Pass"), *CopyShader, CopyPassParameters, GroupCount);
 
 		GraphBuilder.Execute();
 	});
@@ -382,6 +372,25 @@ uint32 FWaveGenerator::BitReverse(uint32 Value, uint32 NumBits)
 	return NewValue;
 }
 
+TRefCountPtr<IPooledRenderTarget> FWaveGenerator::GetPooledRenderTarget(UTextureRenderTarget2D* RenderTarget)
+{
+	FRenderTarget* RenderTargetResource = RenderTarget->GetRenderTargetResource();
+	FTexture2DRHIRef RenderTargetRHI = RenderTargetResource->GetRenderTargetTexture();
+
+	FSceneRenderTargetItem RenderTargetItem;
+	RenderTargetItem.TargetableTexture = RenderTargetRHI;
+	RenderTargetItem.ShaderResourceTexture = RenderTargetRHI;
+
+	FPooledRenderTargetDesc RenderTargetDesc = FPooledRenderTargetDesc::Create2DDesc(RenderTargetResource->GetSizeXY(),
+		RenderTargetRHI->GetFormat(), FClearValueBinding::Black, TexCreate_None, TexCreate_RenderTargetable |
+		TexCreate_ShaderResource | TexCreate_UAV, false);
+	TRefCountPtr<IPooledRenderTarget> PooledRenderTarget;
+	GRenderTargetPool.CreateUntrackedElement(RenderTargetDesc, PooledRenderTarget, RenderTargetItem);
+
+	return PooledRenderTarget;
+}
+
+
 template <FWaveGenerator::EFFTDirection Direction>
 void FWaveGenerator::DoFFT(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet)
 {
@@ -426,5 +435,12 @@ void FWaveGenerator::DoFFT(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet)
 			GroupCount);
 	}
 }
+
+void FWaveGenerator::DoFFT2(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet)
+{
+	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, DataSet);
+	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, DataSet);
+}
+
 
 

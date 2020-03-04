@@ -19,9 +19,12 @@ public:
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, HeightBuffer)
+		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, DisplacementXBuffer)
+		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, DisplacementYBuffer)
 		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, SlopeXBuffer)
 		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, SlopeYBuffer)
-		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DisplacementTexture)
+		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture<float2>, SlopeTexture)
 		SHADER_PARAMETER(FIntPoint, BufferSize)
 	END_SHADER_PARAMETER_STRUCT()
 

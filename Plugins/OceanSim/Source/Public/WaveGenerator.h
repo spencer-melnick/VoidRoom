@@ -28,12 +28,10 @@ public:
 	
 	~FWaveGenerator();
 	
-	void Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* Target);
+	void Initialize(uint32 LengthInPoints, UTextureRenderTarget2D* HeightTarget, UTextureRenderTarget2D* SlopeTarget);
 	void BeginRendering();
 	void StopRendering();
 	void SetParameters(FGenerationParameters NewParameters);
-
-	UTextureRenderTarget2D* GetRenderTarget() const;
 
 private:
 	struct FButterflyOperation
@@ -60,10 +58,12 @@ private:
 
 	template<EFFTDirection Direction>
 	void DoFFT(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet);
+	void DoFFT2(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet);
 	
 	static FVector2D ImaginaryExponent(float Theta);
 	static FVector2D ComplexMultiply(FVector2D A, FVector2D B);
 	static uint32 BitReverse(uint32 Value, uint32 NumBits);
+	static TRefCountPtr<IPooledRenderTarget> GetPooledRenderTarget(UTextureRenderTarget2D* RenderTarget);
 
 
 	// Shader variables
@@ -78,7 +78,8 @@ private:
 
 	
 	// Textures / Buffers
-	UTextureRenderTarget2D* RenderTarget = nullptr;
+	UTextureRenderTarget2D* DisplacementRenderTarget = nullptr;
+	UTextureRenderTarget2D* SlopeRenderTarget = nullptr;
 
 	FTexture2DRHIRef GaussianNoiseTexture;
 	FShaderResourceViewRHIRef GaussianNoiseTextureSRV;

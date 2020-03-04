@@ -17,12 +17,25 @@ void AWaveGeneratorActor::BeginPlay()
 	Super::BeginPlay();
 	UpdateGeneratorParameters();
 
-	FIntPoint RenderTargetSize(RenderTarget->GetSurfaceHeight(), RenderTarget->GetSurfaceWidth());
+	FIntPoint RenderTargetSize(DisplacementRenderTarget->GetSurfaceHeight(), DisplacementRenderTarget->GetSurfaceWidth());
 
-	if (RenderTarget->GetFormat() != EPixelFormat::PF_A32B32G32R32F &&
-		RenderTarget->GetFormat() != EPixelFormat::PF_FloatRGBA)
+	if (SlopeRenderTarget->GetSurfaceWidth() != RenderTargetSize.X || SlopeRenderTarget->GetSurfaceHeight() != RenderTargetSize.Y)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Wave Generator render target must be either in float16 or float32 RGBA format"));
+		UE_LOG(LogTemp, Error, TEXT("Wave Generator displacement and slope render targets must be the same size"));
+		return;
+	}
+
+	if (DisplacementRenderTarget->GetFormat() != EPixelFormat::PF_A32B32G32R32F &&
+		DisplacementRenderTarget->GetFormat() != EPixelFormat::PF_FloatRGBA)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Wave Generator displacement render target must be either in float16 RGB or float32 RGBA format"));
+		return;
+	}
+
+	if (SlopeRenderTarget->GetFormat() != EPixelFormat::PF_G16R16F &&
+		SlopeRenderTarget->GetFormat() != EPixelFormat::PF_G32R32F)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Wave Generator slope render target must be either in float16 GR or float32 GR format"));
 		return;
 	}
 
@@ -38,7 +51,7 @@ void AWaveGeneratorActor::BeginPlay()
 		return;
 	}
 	
-	WaveGenerator.Initialize(RenderTargetSize.X, RenderTarget);
+	WaveGenerator.Initialize(RenderTargetSize.X, DisplacementRenderTarget, SlopeRenderTarget);
 	WaveGenerator.BeginRendering();
 }
 

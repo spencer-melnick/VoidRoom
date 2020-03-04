@@ -14,7 +14,7 @@ float Phillips(float2 K)
 
     float kw = dot(k, w);
     
-    float SingleDirectionFactor = sqrt((kw + 1) / 2);
+    float SingleDirectionFactor = sqrt((-kw + 1) / 2);
 
     return Amplitude * SingleDirectionFactor * exp(-1 / (k2 * L * L)) * pow(kw, 6) * exp(-k2 * l * l) / (k2 * k2);
 }

@@ -1,9 +1,13 @@
 #include "/OceanShaders/Private/CoordinateToIndex.ush"
 
 StructuredBuffer<float2> HeightBuffer;
+StructuredBuffer<float2> DisplacementXBuffer;
+StructuredBuffer<float2> DisplacementYBuffer;
 StructuredBuffer<float2> SlopeXBuffer;
 StructuredBuffer<float2> SlopeYBuffer;
-RWTexture2D<float4> OutputTexture;
+
+RWTexture2D<float4> DisplacementTexture;
+RWTexture2D<float2> SlopeTexture;
 
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
 void main(uint3 id : SV_DispatchThreadID)
@@ -16,9 +20,14 @@ void main(uint3 id : SV_DispatchThreadID)
     
     uint Index = CoordinateToIndex(id.xy);
     
-    float HeightValue = HeightBuffer[Index].x * Factor;
-    float SlopeXValue = SlopeXBuffer[Index].x * Factor;
-    float SlopeYValue = SlopeYBuffer[Index].x * Factor;
+    float HeightValue = HeightBuffer[Index].x;
+    float DisplacementXValue = DisplacementXBuffer[Index].x;
+    float DisplacementYValue = DisplacementYBuffer[Index].x;
     
-    OutputTexture[id.xy] = float4(HeightValue, SlopeXValue, SlopeYValue, 1);
+    float SlopeXValue = SlopeXBuffer[Index].x;
+    float SlopeYValue = SlopeYBuffer[Index].x;
+    
+    DisplacementTexture[id.xy] = float4(float3(DisplacementXValue, DisplacementYValue, HeightValue) * Factor, 1);
+    SlopeTexture[id.xy] = float2(SlopeXValue, SlopeYValue) * Factor;
+
 }

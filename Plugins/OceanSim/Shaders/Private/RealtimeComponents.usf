@@ -2,6 +2,8 @@
 
 Texture2D<float4> InitialComponents;
 RWStructuredBuffer<float2> HeightComponentsBuffer;
+RWStructuredBuffer<float2> DisplacementXBuffer;
+RWStructuredBuffer<float2> DisplacementYBuffer;
 RWStructuredBuffer<float2> SlopeXBuffer;
 RWStructuredBuffer<float2> SlopeYBuffer;
 
@@ -37,5 +39,13 @@ void main( uint3 id : SV_DispatchThreadID )
     
     SlopeXBuffer[Index] = ComplexMultiply(Result, float2(0, K.x));
     SlopeYBuffer[Index] = ComplexMultiply(Result, float2(0, K.y));
-
+    
+    float LengthK = length(K);
+    if (LengthK < 0.0001)
+    {
+        LengthK = 0.0001;
+    }
+    
+    DisplacementXBuffer[Index] = ComplexMultiply(Result, float2(0, K.x / LengthK));
+    DisplacementYBuffer[Index] = ComplexMultiply(Result, float2(0, K.y / LengthK));
 }

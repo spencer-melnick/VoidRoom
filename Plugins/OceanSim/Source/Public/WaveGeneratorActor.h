@@ -21,7 +21,10 @@ public:
 	#endif
 	
 	UPROPERTY(Category = "Wave Generation", BlueprintReadWrite, EditAnywhere)
-	UTextureRenderTarget2D* RenderTarget;
+	UTextureRenderTarget2D* DisplacementRenderTarget;
+
+	UPROPERTY(Category = "Wave Generation", BlueprintReadWrite, EditAnywhere)
+	UTextureRenderTarget2D* SlopeRenderTarget;
 
 	UPROPERTY(Category = "Wave Generation", BlueprintReadWrite, EditAnywhere)
 	float Amplitude = 4;
