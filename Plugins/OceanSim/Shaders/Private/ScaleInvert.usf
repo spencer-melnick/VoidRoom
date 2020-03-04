@@ -1,6 +1,8 @@
 #include "/OceanShaders/Private/CoordinateToIndex.ush"
 
-StructuredBuffer<float2> DataBuffer;
+StructuredBuffer<float2> HeightBuffer;
+StructuredBuffer<float2> SlopeXBuffer;
+StructuredBuffer<float2> SlopeYBuffer;
 RWTexture2D<float4> OutputTexture;
 
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
@@ -12,7 +14,11 @@ void main(uint3 id : SV_DispatchThreadID)
         Factor = -Factor;
     }
     
-    float Value = DataBuffer[CoordinateToIndex(id.xy)].x * Factor;
+    uint Index = CoordinateToIndex(id.xy);
     
-    OutputTexture[id.xy] = float4(Value, Value, Value, 1);
+    float HeightValue = HeightBuffer[Index].x * Factor;
+    float SlopeXValue = SlopeXBuffer[Index].x * Factor;
+    float SlopeYValue = SlopeYBuffer[Index].x * Factor;
+    
+    OutputTexture[id.xy] = float4(HeightValue, SlopeXValue, SlopeYValue, 1);
 }

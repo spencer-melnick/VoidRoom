@@ -18,7 +18,9 @@ public:
 	SHADER_USE_PARAMETER_STRUCT(FScaleInvertShader, FGlobalShader)
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
-		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, DataBuffer)
+		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, HeightBuffer)
+		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, SlopeXBuffer)
+		SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<float2>, SlopeYBuffer)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, OutputTexture)
 		SHADER_PARAMETER(FIntPoint, BufferSize)
 	END_SHADER_PARAMETER_STRUCT()

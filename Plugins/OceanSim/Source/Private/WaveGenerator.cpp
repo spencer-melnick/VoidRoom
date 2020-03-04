@@ -130,13 +130,22 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	// Generate realtime components
 	FIntVector GroupCount = FComputeShaderUtils::GetGroupCount(BufferSize, FRealtimeComponentsShader::ThreadsPerGroupDimension);
 
+	// Allocate a ton of buffers for all the component variants
 	FRDGBufferDesc ComponentsBufferDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(float) * 2, Length * Length);
 	FRDGBufferRef ComponentsBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveHeightComponentsBuffer"));
 	FRDGBufferUAVRef ComponentsBufferUAV = GraphBuilder.CreateUAV(ComponentsBuffer);
 
+	FRDGBufferRef SlopeXBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveSlopeXBuffer"));
+	FRDGBufferUAVRef SlopeXBufferUAV = GraphBuilder.CreateUAV(SlopeXBuffer);
+
+	FRDGBufferRef SlopeYBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveSlopeYBuffer"));
+	FRDGBufferUAVRef SlopeYBufferUAV = GraphBuilder.CreateUAV(SlopeYBuffer);
+
 	FRealtimeComponentsShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FRealtimeComponentsShader::FParameters>();
 	PassParameters->InitialComponents = InitialComponentsTextureSRV;
-	PassParameters->OutputBuffer = ComponentsBufferUAV;
+	PassParameters->HeightComponentsBuffer = ComponentsBufferUAV;
+	PassParameters->SlopeXBuffer = SlopeXBufferUAV;
+	PassParameters->SlopeYBuffer = SlopeYBufferUAV;
 	PassParameters->CommonParameters = CommonParameters;
 	PassParameters->Time = GRenderingRealtimeClock.GetCurrentTime() - StartTime;
 
@@ -146,6 +155,12 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 
 	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, ComponentsBufferUAV);
 	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, ComponentsBufferUAV);
+
+	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, SlopeXBufferUAV);
+	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, SlopeXBufferUAV);
+
+	DoFFT<EFFTDirection::FFT_Horizontal>(GraphBuilder, SlopeYBufferUAV);
+	DoFFT<EFFTDirection::FFT_Vertical>(GraphBuilder, SlopeYBufferUAV);
 
 	{	
 		// Scale and invert results as appropriate to get the height texture
@@ -159,8 +174,16 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		FRDGBufferSRVDesc ComponentsBufferSRVDesc(ComponentsBuffer);
 		FRDGBufferSRVRef ComponentsBufferSRV = GraphBuilder.CreateSRV(ComponentsBufferSRVDesc);
 
+		FRDGBufferSRVDesc SlopeXBufferSRVDesc(SlopeXBuffer);
+		FRDGBufferSRVRef SlopeXBufferSRV = GraphBuilder.CreateSRV(SlopeXBufferSRVDesc);
+
+		FRDGBufferSRVDesc SlopeYBufferSRVDesc(SlopeYBuffer);
+		FRDGBufferSRVRef SlopeYBufferSRV = GraphBuilder.CreateSRV(SlopeYBufferSRVDesc);
+
 		auto* ScaleInvertParameters = GraphBuilder.AllocParameters<FScaleInvertShader::FParameters>();
-		ScaleInvertParameters->DataBuffer = ComponentsBufferSRV;
+		ScaleInvertParameters->HeightBuffer = ComponentsBufferSRV;
+		ScaleInvertParameters->SlopeXBuffer = SlopeXBufferSRV;
+		ScaleInvertParameters->SlopeYBuffer = SlopeYBufferSRV;
 		ScaleInvertParameters->OutputTexture = GraphBuilder.CreateUAV(HeightTexture);
 		ScaleInvertParameters->BufferSize = BufferSize;
 

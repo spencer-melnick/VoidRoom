@@ -1,7 +1,9 @@
 #include "/OceanShaders/Private/Common.ush"
 
 Texture2D<float4> InitialComponents;
-RWStructuredBuffer<float2> OutputBuffer;
+RWStructuredBuffer<float2> HeightComponentsBuffer;
+RWStructuredBuffer<float2> SlopeXBuffer;
+RWStructuredBuffer<float2> SlopeYBuffer;
 
 float Time;
 
@@ -31,5 +33,9 @@ void main( uint3 id : SV_DispatchThreadID )
 
     uint Index = CoordinateToIndex(id.xy);
 	
-    OutputBuffer[Index] = Result;
+    HeightComponentsBuffer[Index] = Result;
+    
+    SlopeXBuffer[Index] = ComplexMultiply(Result, float2(0, K.x));
+    SlopeYBuffer[Index] = ComplexMultiply(Result, float2(0, K.y));
+
 }
