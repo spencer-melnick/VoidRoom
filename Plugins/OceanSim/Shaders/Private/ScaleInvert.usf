@@ -9,6 +9,8 @@ StructuredBuffer<float2> SlopeYBuffer;
 RWTexture2D<float4> DisplacementTexture;
 RWTexture2D<float2> SlopeTexture;
 
+float FoamLambda;
+
 
 
 uint WrapValue(int Value, int Range)
@@ -40,8 +42,6 @@ float Jacobian(int2 Coordinate, float Factor)
     // (N+M) will always be odd if the adjacent (N+M) is even and vice versa
     Factor = -Factor;
     
-    const float Lambda = 50;
-    
     // Create indices of adjacent texels, wrapping at edges
     int XIndex1 = CoordinateToIndex(WrapCoordinate(Coordinate - int2(1, 0)));
     int XIndex2 = CoordinateToIndex(WrapCoordinate(Coordinate + int2(1, 0)));
@@ -50,11 +50,11 @@ float Jacobian(int2 Coordinate, float Factor)
     int YIndex2 = CoordinateToIndex(WrapCoordinate(Coordinate + int2(0, 1)));
     
     // Approximate partial derivatives using slope
-    float dXdX = Lambda * Factor * (DisplacementXBuffer[XIndex2].x - DisplacementXBuffer[XIndex1].x) / 2;
-    float dXdY = Lambda * Factor * (DisplacementXBuffer[YIndex2].x - DisplacementXBuffer[YIndex1].x) / 2;
+    float dXdX = FoamLambda * Factor * (DisplacementXBuffer[XIndex2].x - DisplacementXBuffer[XIndex1].x) / 2;
+    float dXdY = FoamLambda * Factor * (DisplacementXBuffer[YIndex2].x - DisplacementXBuffer[YIndex1].x) / 2;
     
-    float dYdX = Lambda * Factor * (DisplacementYBuffer[XIndex2].x - DisplacementYBuffer[XIndex1].x) / 2;
-    float dYdY = Lambda * Factor * (DisplacementYBuffer[YIndex2].x - DisplacementYBuffer[YIndex1].x) / 2;
+    float dYdX = FoamLambda * Factor * (DisplacementYBuffer[XIndex2].x - DisplacementYBuffer[XIndex1].x) / 2;
+    float dYdY = FoamLambda * Factor * (DisplacementYBuffer[YIndex2].x - DisplacementYBuffer[YIndex1].x) / 2;
     
     // Calculate the Jacobian determinant
     return (1 + dXdX) * (1 + dYdY) - dXdY * dYdX;

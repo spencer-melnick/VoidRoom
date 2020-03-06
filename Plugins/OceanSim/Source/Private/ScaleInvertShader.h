@@ -26,6 +26,7 @@ public:
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture2D<float4>, DisplacementTexture)
 		SHADER_PARAMETER_RDG_TEXTURE_UAV(RWTexture<float2>, SlopeTexture)
 		SHADER_PARAMETER(FIntPoint, BufferSize)
+		SHADER_PARAMETER(float, FoamLambda)
 	END_SHADER_PARAMETER_STRUCT()
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)

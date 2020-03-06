@@ -18,7 +18,7 @@ public:
 	DECLARE_GLOBAL_SHADER(FButterflyShader)
 	SHADER_USE_PARAMETER_STRUCT(FButterflyShader, FGlobalShader)
 
-		BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
+	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 		SHADER_PARAMETER_RDG_BUFFER_UAV(RWStructuredBuffer<float2>, DataBuffer)
 		SHADER_PARAMETER_SRV(StructuredBuffer<ButterflyOperation>, Operations)
 		SHADER_PARAMETER(FIntPoint, BufferSize)

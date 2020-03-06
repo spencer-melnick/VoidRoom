@@ -15,6 +15,12 @@
 #include "BitReverseCopyShader.h"
 #include "ScaleInvertShader.h"
 
+
+DECLARE_GPU_STAT(WaveComponentGeneration)
+DECLARE_GPU_STAT(WaveFFTs)
+DECLARE_GPU_STAT(WaveChannelCombination)
+
+
 FWaveGenerator::~FWaveGenerator()
 {
 	// Just in case the object is somehow still hooked to the render thread
@@ -103,6 +109,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	CommonParameters.Gravity = GenerationParameters.Gravity;
 	CommonParameters.WindSpeed = GenerationParameters.WindSpeed;
 	CommonParameters.WindDirection = GenerationParameters.WindDirection.GetSafeNormal(0.001);
+	float FoamLambda = GenerationParameters.FoamLambda;
 
 	// No matter what happens, at the end of all the compute passes, the parameters will be up to date
 	bAreParametersUpToDate = true;
@@ -143,27 +150,41 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 	FRDGBufferRef SlopeYBuffer = GraphBuilder.CreateBuffer(ComponentsBufferDesc, TEXT("WaveSlopeYBuffer"));
 	FRDGBufferUAVRef SlopeYBufferUAV = GraphBuilder.CreateUAV(SlopeYBuffer);
 
-	FRealtimeComponentsShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FRealtimeComponentsShader::FParameters>();
-	PassParameters->InitialComponents = InitialComponentsTextureSRV;
-	PassParameters->HeightComponentsBuffer = ComponentsBufferUAV;
-	PassParameters->DisplacementXBuffer = DisplacementXBufferUAV;
-	PassParameters->DisplacementYBuffer = DisplacementYBufferUAV;
-	PassParameters->SlopeXBuffer = SlopeXBufferUAV;
-	PassParameters->SlopeYBuffer = SlopeYBufferUAV;
-	PassParameters->CommonParameters = CommonParameters;
-	PassParameters->Time = GRenderingRealtimeClock.GetCurrentTime() - StartTime;
+	{
+		RDG_GPU_STAT_SCOPE(GraphBuilder, WaveComponentGeneration)
+		
+		FRealtimeComponentsShader::FParameters* PassParameters = GraphBuilder.AllocParameters<FRealtimeComponentsShader::FParameters>();
+		PassParameters->InitialComponents = InitialComponentsTextureSRV;
+		PassParameters->HeightComponentsBuffer = ComponentsBufferUAV;
+		PassParameters->DisplacementXBuffer = DisplacementXBufferUAV;
+		PassParameters->DisplacementYBuffer = DisplacementYBufferUAV;
+		PassParameters->SlopeXBuffer = SlopeXBufferUAV;
+		PassParameters->SlopeYBuffer = SlopeYBufferUAV;
+		PassParameters->CommonParameters = CommonParameters;
+		PassParameters->Time = GRenderingRealtimeClock.GetCurrentTime() - StartTime;
 
-	TShaderMapRef<FRealtimeComponentsShader> ComponentsShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		TShaderMapRef<FRealtimeComponentsShader> ComponentsShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
-	FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
+		FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("Wave Height Component Generation"), *ComponentsShader, PassParameters, GroupCount);
+	}
 
-	DoFFT2(GraphBuilder, ComponentsBufferUAV);
-	DoFFT2(GraphBuilder, DisplacementXBufferUAV);
-	DoFFT2(GraphBuilder, DisplacementYBufferUAV);
-	DoFFT2(GraphBuilder, SlopeXBufferUAV);
-	DoFFT2(GraphBuilder, SlopeYBufferUAV);
+	// FFT passes
+	// TODO: Optimize FFTs using different LODs for displacement and normals
+	// TODO: Possibly combine X and Y gradient FFTs
 
-	{	
+	{
+		RDG_GPU_STAT_SCOPE(GraphBuilder, WaveFFTs)
+		
+		DoFFT2(GraphBuilder, ComponentsBufferUAV);
+		DoFFT2(GraphBuilder, DisplacementXBufferUAV);
+		DoFFT2(GraphBuilder, DisplacementYBufferUAV);
+		DoFFT2(GraphBuilder, SlopeXBufferUAV);
+		DoFFT2(GraphBuilder, SlopeYBufferUAV);
+	}
+
+	{
+		RDG_GPU_STAT_SCOPE(GraphBuilder, WaveChannelCombination)
+		
 		// Scale and invert results as appropriate to get the height texture
 
 		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length), FScaleInvertShader::ThreadsPerGroupDimension);
@@ -200,6 +221,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		ScaleInvertParameters->DisplacementTexture = GraphBuilder.CreateUAV(HeightTexture);
 		ScaleInvertParameters->SlopeTexture = GraphBuilder.CreateUAV(SlopeTexture);
 		ScaleInvertParameters->BufferSize = BufferSize;
+		ScaleInvertParameters->FoamLambda = FoamLambda;
 
 		TShaderMapRef<FScaleInvertShader> ScaleInvertShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 

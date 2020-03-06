@@ -24,6 +24,7 @@ public:
 		float Gravity = 9.81;
 		float WindSpeed = 40;
 		FVector2D WindDirection = FVector2D(1, 0);
+		float FoamLambda = 50;
 	};
 	
 	~FWaveGenerator();

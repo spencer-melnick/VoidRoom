@@ -69,7 +69,8 @@ void AWaveGeneratorActor::PostEditChangeProperty(FPropertyChangedEvent& Property
 		PropertyName == GET_MEMBER_NAME_CHECKED(AWaveGeneratorActor, PatchLength) ||
 		PropertyName == GET_MEMBER_NAME_CHECKED(AWaveGeneratorActor, Gravity) ||
 		PropertyName == GET_MEMBER_NAME_CHECKED(AWaveGeneratorActor, WindSpeed) ||
-		PropertyName == GET_MEMBER_NAME_CHECKED(AWaveGeneratorActor, WindDirection))
+		PropertyName == GET_MEMBER_NAME_CHECKED(AWaveGeneratorActor, WindDirection) ||
+		PropertyName == GET_MEMBER_NAME_CHECKED(AWaveGeneratorActor, FoamLambda))
 	{
 		UpdateGeneratorParameters();
 	}
@@ -84,6 +85,7 @@ void AWaveGeneratorActor::UpdateGeneratorParameters()
 	Parameters.Gravity = Gravity;
 	Parameters.WindSpeed = WindSpeed;
 	Parameters.WindDirection = WindDirection;
+	Parameters.FoamLambda = FoamLambda;
 
 	WaveGenerator.SetParameters(Parameters);
 }

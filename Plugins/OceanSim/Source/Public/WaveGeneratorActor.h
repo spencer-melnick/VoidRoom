@@ -41,6 +41,9 @@ public:
 	UPROPERTY(Category = "Wave Generation", BlueprintReadWrite, EditAnywhere)
 	FVector2D WindDirection = FVector2D(1, 0);
 
+	UPROPERTY(Category = "Wave Generation", BlueprintReadWrite, EditAnywhere)
+	float FoamLambda = 50;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
