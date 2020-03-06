@@ -9,6 +9,58 @@ StructuredBuffer<float2> SlopeYBuffer;
 RWTexture2D<float4> DisplacementTexture;
 RWTexture2D<float2> SlopeTexture;
 
+
+
+uint WrapValue(int Value, int Range)
+{
+    if (Value < 0)
+    {
+        return Range - (Value % Range);
+    }
+    else
+    {
+        return Value % Range;
+    }
+}
+
+uint2 WrapCoordinate(int2 Coordinate)
+{
+    uint2 Result;
+    
+    Result.x = WrapValue(Coordinate.x, BufferSize.x);
+    Result.y = WrapValue(Coordinate.y, BufferSize.y);
+
+    return Result;
+}
+
+float Jacobian(int2 Coordinate, float Factor)
+{
+    // Since the sampled coordinates will always be adjacent, we know that
+    // the (-1)^(N+M) factor will be inverted
+    // (N+M) will always be odd if the adjacent (N+M) is even and vice versa
+    Factor = -Factor;
+    
+    const float Lambda = 50;
+    
+    // Create indices of adjacent texels, wrapping at edges
+    int XIndex1 = CoordinateToIndex(WrapCoordinate(Coordinate - int2(1, 0)));
+    int XIndex2 = CoordinateToIndex(WrapCoordinate(Coordinate + int2(1, 0)));
+    
+    int YIndex1 = CoordinateToIndex(WrapCoordinate(Coordinate - int2(0, 1)));
+    int YIndex2 = CoordinateToIndex(WrapCoordinate(Coordinate + int2(0, 1)));
+    
+    // Approximate partial derivatives using slope
+    float dXdX = Lambda * Factor * (DisplacementXBuffer[XIndex2].x - DisplacementXBuffer[XIndex1].x) / 2;
+    float dXdY = Lambda * Factor * (DisplacementXBuffer[YIndex2].x - DisplacementXBuffer[YIndex1].x) / 2;
+    
+    float dYdX = Lambda * Factor * (DisplacementYBuffer[XIndex2].x - DisplacementYBuffer[XIndex1].x) / 2;
+    float dYdY = Lambda * Factor * (DisplacementYBuffer[YIndex2].x - DisplacementYBuffer[YIndex1].x) / 2;
+    
+    // Calculate the Jacobian determinant
+    return (1 + dXdX) * (1 + dYdY) - dXdY * dYdX;
+
+}
+
 [numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
@@ -27,7 +79,7 @@ void main(uint3 id : SV_DispatchThreadID)
     float SlopeXValue = SlopeXBuffer[Index].x;
     float SlopeYValue = SlopeYBuffer[Index].x;
     
-    DisplacementTexture[id.xy] = float4(float3(DisplacementXValue, DisplacementYValue, HeightValue) * Factor, 1);
+    DisplacementTexture[id.xy] = float4(float3(DisplacementXValue, DisplacementYValue, HeightValue) * Factor, Jacobian(id.xy, Factor));
     SlopeTexture[id.xy] = float2(SlopeXValue, SlopeYValue) * Factor;
 
 }
