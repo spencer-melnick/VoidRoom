@@ -61,7 +61,7 @@ float Jacobian(int2 Coordinate, float Factor)
 
 }
 
-[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, 1)]
+[numthreads(8, 8, 1)]
 void main(uint3 id : SV_DispatchThreadID)
 {
     float Factor = 1 / float(BufferSize.x * BufferSize.y);

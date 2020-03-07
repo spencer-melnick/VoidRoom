@@ -187,7 +187,7 @@ void FWaveGenerator::OnRender(FRHICommandListImmediate& RHICmdList, FSceneRender
 		
 		// Scale and invert results as appropriate to get the height texture
 
-		GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length), FScaleInvertShader::ThreadsPerGroupDimension);
+		GroupCount = FIntVector(Length / 8, Length / 8, 1);
 
 		FRDGTextureDesc HeightTextureDesc = FRDGTextureDesc::Create2DDesc(BufferSize, EPixelFormat::PF_FloatRGBA, FClearValueBinding::Black,
 			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false);
@@ -442,7 +442,7 @@ void FWaveGenerator::DoFFT(FRDGBuilder& GraphBuilder, FRDGBufferUAVRef DataSet)
 
 	// Get shader and group count
 	TShaderMapRef<FButterflyShader<Direction>> ButterflyShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-	GroupCount = FComputeShaderUtils::GetGroupCount(FIntPoint(Length, Length / 2), FButterflyShader<Direction>::ThreadsPerGroupDimension);
+	GroupCount = FIntVector(Length / 8, Length / (8 * 2), 1);
 
 	// Do a pass for each step of the (I)FFT
 	for (uint32 i = 0; i < NumSteps; i++)
