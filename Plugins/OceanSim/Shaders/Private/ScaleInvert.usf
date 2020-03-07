@@ -15,14 +15,7 @@ float FoamLambda;
 
 uint WrapValue(int Value, int Range)
 {
-    if (Value < 0)
-    {
-        return Range - (Value % Range);
-    }
-    else
-    {
-        return Value % Range;
-    }
+    return (Value + Range) % Range;
 }
 
 uint2 WrapCoordinate(int2 Coordinate)
