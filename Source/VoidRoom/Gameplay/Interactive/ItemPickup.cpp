@@ -19,8 +19,8 @@ void AItemPickup::OnInteract(ACharacter* Character)
 
         if (PlayerState != nullptr)
         {
-            UInventoryObject* PickupItem = NewObject<UInventoryObject>();
-            PickupItem->Name = PickupName;
+            FInventoryObject PickupItem;
+            PickupItem.Name = PickupName;
 
             PlayerState->Inventory.Add(PickupItem);
 
