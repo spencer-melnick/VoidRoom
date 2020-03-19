@@ -30,6 +30,18 @@ void AVDPlayerController::SetupInputComponent()
 }
 
 
+void AVDPlayerController::BeginPlay()
+{
+    Super::BeginPlay();
+
+	UIWidget = CreateWidget<UUserWidget>(this, UIClass);
+
+	if (UIWidget != nullptr)
+	{
+        UIWidget->AddToPlayerScreen(1);
+	}
+}
+
 
 // Protected VD interface
 

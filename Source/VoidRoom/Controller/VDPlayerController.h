@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "../UI/RoleDisplay.h"
 #include "VDPlayerController.generated.h"
+
 
 /**
  * 
@@ -17,7 +19,11 @@ class VOIDROOM_API AVDPlayerController : public APlayerController
 public:
 	// Override public interface
 	virtual void SetupInputComponent() override;
+	virtual void BeginPlay() override;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="UI")
+	TSubclassOf<class UUserWidget> UIClass;
+	
 protected:
 	// VD protected interface
 
@@ -32,4 +38,8 @@ protected:
 
 	void Interact();
 	void Climb();
+
+private:
+
+	UUserWidget* UIWidget;
 };
