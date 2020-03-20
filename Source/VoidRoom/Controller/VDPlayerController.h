@@ -33,6 +33,9 @@ protected:
 	void LookUp(float Scale);
 	void LookRight(float Scale);
 
+	void Jump();
+	void EndJump();
+
 	void Crouch();
 	void UnCrouch();
 

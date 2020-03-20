@@ -21,6 +21,7 @@ public:
 	// Public engine overrides
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual bool CanJumpInternal_Implementation() const override;
 
 	// Bound events
 	UFUNCTION()
