@@ -16,9 +16,22 @@ class VOIDROOM_API AVDPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	// State class
+	enum class EControlState
+	{
+		GameControl,
+		MenuControl,
+		InventoryControl
+	};
+
+	
 	// Engine overrides
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
+
+
+	// Public functions
+	void SetControlState(EControlState NewControlState);
 
 
 	// Public properties
@@ -40,8 +53,15 @@ protected:
 	void Interact();
 	void Climb();
 
+	void ToggleInventory();
+
 private:
 	void CreateUIWidgets();
+	void HideUIWidgets();
+
+
+	// Private variables
+	EControlState ControlState;
 	
 	// UI Widgets
 	UUserWidget* UIWidget;

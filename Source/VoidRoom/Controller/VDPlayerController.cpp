@@ -32,6 +32,8 @@ void AVDPlayerController::SetupInputComponent()
 
     InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
     //InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
+
+    InputComponent->BindAction("ToggleInventory", EInputEvent::IE_Pressed, this, &AVDPlayerController::ToggleInventory);
 }
 
 
@@ -42,8 +44,55 @@ void AVDPlayerController::BeginPlay()
     if (IsLocalPlayerController())
     {
         CreateUIWidgets();
+        HideUIWidgets();
     }
 }
+
+
+// Public functions
+
+void AVDPlayerController::SetControlState(EControlState NewControlState)
+{
+    HideUIWidgets();
+    ControlState = NewControlState;
+
+	// Switch statement to set input mode and show mouse cursor
+	switch(ControlState)
+	{
+		case EControlState::GameControl:
+            bShowMouseCursor = false;
+            SetInputMode(FInputModeGameOnly());
+            break;
+
+        case EControlState::MenuControl:
+        case EControlState::InventoryControl:
+            bShowMouseCursor = true;
+            SetInputMode(FInputModeGameAndUI());
+
+			// Center the mouse in the viewport
+            {
+                int ViewportWidth, ViewportHeight;
+                GetViewportSize(ViewportWidth, ViewportHeight);
+                SetMouseLocation(ViewportWidth / 2, ViewportHeight / 2);
+            }
+            break;
+
+        default:
+            break;
+	}
+
+	// Separate switch statement to set visible widgets
+	switch(ControlState)
+	{
+		case EControlState::InventoryControl:
+            InventoryGridWidget->SetVisibility(ESlateVisibility::Visible);
+            break;
+
+        default:
+            break;
+	}
+}
+
 
 
 // Protected VD interface
@@ -128,6 +177,19 @@ void AVDPlayerController::Climb()
     }
 }
 
+void AVDPlayerController::ToggleInventory()
+{
+	if (ControlState == EControlState::GameControl)
+	{
+        SetControlState(EControlState::InventoryControl);
+	}
+    else if (ControlState == EControlState::InventoryControl)
+    {
+        SetControlState(EControlState::GameControl);
+    }
+}
+
+
 
 // Private functions
 void AVDPlayerController::CreateUIWidgets()
@@ -139,4 +201,10 @@ void AVDPlayerController::CreateUIWidgets()
         InventoryGridWidget->AddToPlayerScreen();
 	}
 }
+
+void AVDPlayerController::HideUIWidgets()
+{
+    InventoryGridWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+
 
