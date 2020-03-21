@@ -4,6 +4,7 @@
 #include "VDPlayerController.h"
 
 #include "GameFramework/Pawn.h"
+#include "Blueprint/UserWidget.h"
 
 #include "../Character/VDCharacter.h"
 
@@ -38,12 +39,10 @@ void AVDPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
-	UIWidget = CreateWidget<UUserWidget>(this, UIClass);
-
-	if (UIWidget != nullptr)
-	{
-        UIWidget->AddToPlayerScreen(1);
-	}
+    if (IsLocalPlayerController())
+    {
+        CreateUIWidgets();
+    }
 }
 
 
@@ -128,3 +127,16 @@ void AVDPlayerController::Climb()
         PossessedPawn->TryClimbLedge();
     }
 }
+
+
+// Private functions
+void AVDPlayerController::CreateUIWidgets()
+{
+    InventoryGridWidget = CreateWidget<UUserWidget>(this, InventoryGridClass);
+
+	if (InventoryGridWidget != nullptr)
+	{
+        InventoryGridWidget->AddToPlayerScreen();
+	}
+}
+

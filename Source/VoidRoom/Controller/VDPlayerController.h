@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "../UI/RoleDisplay.h"
 #include "VDPlayerController.generated.h"
 
 
@@ -17,21 +16,20 @@ class VOIDROOM_API AVDPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	// Override public interface
+	// Engine overrides
 	virtual void SetupInputComponent() override;
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category="UI")
-	TSubclassOf<class UUserWidget> UIClass;
+
+	// Public properties
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UUserWidget> InventoryGridClass;
 	
 protected:
 	// VD protected interface
 
 	void MoveForward(float Scale);
 	void MoveRight(float Scale);
-
-	void LookUp(float Scale);
-	void LookRight(float Scale);
 
 	void Jump();
 	void EndJump();
@@ -43,6 +41,9 @@ protected:
 	void Climb();
 
 private:
-
+	void CreateUIWidgets();
+	
+	// UI Widgets
 	UUserWidget* UIWidget;
+	UUserWidget* InventoryGridWidget;
 };
