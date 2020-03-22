@@ -21,15 +21,19 @@ AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	// Spawn view attachment
 	ViewAttachment = CreateDefaultSubobject<USceneComponent>(TEXT("ViewAttachment"));
 	ViewAttachment->SetupAttachment(GetRootComponent());
+
+	//Spawn physical representation of view attachment
+	LookRotator = CreateDefaultSubobject <USphereComponent>(TEXT("LookRotator"));
+	LookRotator->SetupAttachment(ViewAttachment);
+
+	CarrierConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CarrierConstraint"));
+	CarrierConstraint->SetupAttachment(GetRootComponent());
 	
 	// Spawn first person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(ViewAttachment);
 	FirstPersonCamera->FieldOfView = 90.f;
 	UpdateViewRotation();
-
-	CarrierConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CarrierConstraint"));
-	CarrierConstraint->SetupAttachment(GetRootComponent());
 	
 	// Set movement component parameters
 	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
@@ -68,7 +72,6 @@ void AVDCharacter::Tick(float DeltaTime)
 
 	AdjustEyeHeight();
 	UpdateViewRotation();
-	CarrierConstraint->UpdateConstraintFrames();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -322,13 +325,19 @@ void AVDCharacter::CarryObject(AInteractiveActor* Target)
 		if (TargetComponent != nullptr)
 		{
 			//CarrierConstraint = NewObject<UPhysicsConstraintComponent>(this);
-			CarrierConstraint->SetupAttachment(GetRootComponent());
-			CarrierConstraint->ConstraintActor1 = Target;
-			CarrierConstraint->ConstraintActor2 = this;
-			//CarrierConstraint->OverrideComponent2 = Head;
-			CarrierConstraint->SetAngularSwing1Limit(EAngularConstraintMotion(ACM_Limited), 15.0f);
-			CarrierConstraint->SetAngularSwing2Limit(EAngularConstraintMotion(ACM_Limited), 15.0f);
-			CarrierConstraint->InitComponentConstraint();
+			if (!bIsCarryingObject) {
+				//CarrierConstraint->SetupAttachment(GetRootComponent());
+				CarrierConstraint->ConstraintActor1 = Target;
+				CarrierConstraint->ConstraintActor2 = this;
+				CarrierConstraint->ComponentName2 = FConstrainComponentPropName{ LookRotator->GetFName() };
+				CarrierConstraint->InitComponentConstraint();
+				bIsCarryingObject = true;
+			}
+			else
+			{
+				CarrierConstraint->BreakConstraint();
+				bIsCarryingObject = false;
+			}
 		}
 	}
 }

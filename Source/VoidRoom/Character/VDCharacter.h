@@ -9,6 +9,7 @@
 
 #include "VDCharacterMovementComponent.h"
 #include "../Gameplay/Interactive/InteractiveActor.h"
+#include "Components/SphereComponent.h"
 
 #include "VDCharacter.generated.h"
 
@@ -69,8 +70,8 @@ public:
 	float MaxLedgeAngle = 30.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float ClimbForwardDistance = 20.f;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = VDCharacter)
-	UPhysicsConstraintComponent* CarrierConstraint;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Gameplay)
+	bool bIsCarryingObject = false;
 
 protected:
 	// Protected engine overrides
@@ -93,6 +94,11 @@ private:
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
 
+
+	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
+	UPhysicsConstraintComponent* CarrierConstraint;
+	USphereComponent* LookRotator;
+	
 	// Cached component casts
 	UVDCharacterMovementComponent* CharacterMovementComponent;
 
