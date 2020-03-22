@@ -21,13 +21,16 @@ AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	// Spawn view attachment
 	ViewAttachment = CreateDefaultSubobject<USceneComponent>(TEXT("ViewAttachment"));
 	ViewAttachment->SetupAttachment(GetRootComponent());
-
+	
 	// Spawn first person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(ViewAttachment);
 	FirstPersonCamera->FieldOfView = 90.f;
 	UpdateViewRotation();
 
+	CarrierConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CarrierConstraint"));
+	CarrierConstraint->SetupAttachment(GetRootComponent());
+	
 	// Set movement component parameters
 	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
 	if (MovementComponent == nullptr)
@@ -65,6 +68,7 @@ void AVDCharacter::Tick(float DeltaTime)
 
 	AdjustEyeHeight();
 	UpdateViewRotation();
+	CarrierConstraint->UpdateConstraintFrames();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -79,7 +83,35 @@ void AVDCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 
 }
 
-
+bool AVDCharacter::CanJumpInternal_Implementation() const
+{
+	bool bCanJump = true;
+	if (bCanJump)
+	{
+		// Ensure JumpHoldTime and JumpCount are valid.
+		if (!bWasJumping || GetJumpMaxHoldTime() <= 0.0f)
+		{
+			if (JumpCurrentCount == 0 && GetCharacterMovement()->IsFalling())
+			{
+				bCanJump = JumpCurrentCount + 1 < JumpMaxCount;
+			}
+			else
+			{
+				bCanJump = JumpCurrentCount < JumpMaxCount;
+			}
+		}
+		else
+		{
+			// Only consider JumpKeyHoldTime as long as:
+			// A) The jump limit hasn't been met OR
+			// B) The jump limit has been met AND we were already jumping
+			const bool bJumpKeyHeld = (bPressedJump && JumpKeyHoldTime < GetJumpMaxHoldTime());
+			bCanJump = bJumpKeyHeld &&
+						((JumpCurrentCount < JumpMaxCount) || (bWasJumping && JumpCurrentCount == JumpMaxCount));
+		}
+	}
+	return bCanJump;
+}
 
 // VD public interface
 
@@ -282,6 +314,25 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 	return false;
 }
 
+void AVDCharacter::CarryObject(AInteractiveActor* Target)
+{
+	if (Target != nullptr)
+	{
+		UPrimitiveComponent* TargetComponent = FindComponentByClass<UPrimitiveComponent>();
+		if (TargetComponent != nullptr)
+		{
+			//CarrierConstraint = NewObject<UPhysicsConstraintComponent>(this);
+			CarrierConstraint->SetupAttachment(GetRootComponent());
+			CarrierConstraint->ConstraintActor1 = Target;
+			CarrierConstraint->ConstraintActor2 = this;
+			//CarrierConstraint->OverrideComponent2 = Head;
+			CarrierConstraint->SetAngularSwing1Limit(EAngularConstraintMotion(ACM_Limited), 15.0f);
+			CarrierConstraint->SetAngularSwing2Limit(EAngularConstraintMotion(ACM_Limited), 15.0f);
+			CarrierConstraint->InitComponentConstraint();
+		}
+	}
+}
+
 // Networked functions
 
 bool AVDCharacter::ServerInteract_Validate(AActor* Target)
@@ -300,6 +351,7 @@ void AVDCharacter::ServerInteract_Implementation(AActor* Target)
 		if (InteractiveActor != nullptr)
 		{
 			InteractiveActor->MulticastInteract(this);
+			CarryObject(InteractiveActor);
 		}
 	}
 }

@@ -5,8 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 #include "VDCharacterMovementComponent.h"
+#include "../Gameplay/Interactive/InteractiveActor.h"
 
 #include "VDCharacter.generated.h"
 
@@ -21,6 +23,7 @@ public:
 	// Public engine overrides
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual bool CanJumpInternal_Implementation() const override;
 
 	// Bound events
 	UFUNCTION()
@@ -31,6 +34,7 @@ public:
 	// VD interfaces
 	USceneComponent* GetViewAttachment() const;
 	UCameraComponent* GetFirstPersonCamera() const;
+	
 	UVDCharacterMovementComponent* GetCharacterMovementComponent() const;
 	float GetCurrentEyeHeightFromCenter() const;
 	float GetCurrentEyeHeightFromGround() const;
@@ -44,6 +48,8 @@ public:
 	void Interact();
 	void TryClimbLedge();
 
+	void CarryObject(AInteractiveActor* Target);
+	
 	// Editor properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
@@ -63,6 +69,8 @@ public:
 	float MaxLedgeAngle = 30.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float ClimbForwardDistance = 20.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = VDCharacter)
+	UPhysicsConstraintComponent* CarrierConstraint;
 
 protected:
 	// Protected engine overrides
