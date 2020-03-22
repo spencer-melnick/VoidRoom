@@ -29,14 +29,25 @@ void UInventoryItemWidget::SetEmpty()
 
 void UInventoryItemWidget::UpdateDisplay()
 {
-	if (DisplayText != nullptr)
+	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
 		if (!bIsEmpty)
 		{
+			if (Object.IconTexture.IsValid())
+			{
+				DisplayImage->SetVisibility(ESlateVisibility::Visible);
+				DisplayImage->SetBrushFromTexture(Object.IconTexture.Get());
+			}
+			else
+			{
+				DisplayImage->SetVisibility(ESlateVisibility::Hidden);
+			}
+
 			DisplayText->SetText(FText::AsCultureInvariant(Object.Name));
 		}
 		else
 		{
+			DisplayImage->SetVisibility(ESlateVisibility::Hidden);
 			DisplayText->SetText(FText::AsCultureInvariant(""));
 		}
 	}

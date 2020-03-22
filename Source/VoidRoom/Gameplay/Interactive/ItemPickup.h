@@ -4,7 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "InteractiveActor.h"
+
+#include "Engine/DataTable.h"
 #include "../Inventory/InventoryObject.h"
+
 #include "ItemPickup.generated.h"
 
 /**
@@ -17,7 +20,7 @@ class VOIDROOM_API AItemPickup : public AInteractiveActor
 
 public:
 	UPROPERTY(EditAnywhere)
-	FString PickupName;
+	FDataTableRowHandle Object;
 	
 protected:
 	virtual void OnInteract(ACharacter* Character);

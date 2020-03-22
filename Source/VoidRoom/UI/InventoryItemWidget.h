@@ -8,6 +8,7 @@
 
 // Component includes
 #include "Components/TextBlock.h"
+#include "Components/Image.h"
 
 // Game includes
 #include "../Gameplay/Inventory/InventoryObject.h"
@@ -34,6 +35,9 @@ public:
 	// Child widgets
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	UTextBlock* DisplayText = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UImage* DisplayImage = nullptr;
 
 private:
 	void UpdateDisplay();

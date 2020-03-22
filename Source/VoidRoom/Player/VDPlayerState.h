@@ -21,6 +21,8 @@ public:
 	UPROPERTY(EditAnywhere, Replicated)
 	TArray<FInventoryObject> Inventory;
 
+	bool TryPickupObject(FInventoryObject Object);
+
 protected:
 	UFUNCTION()
 	virtual void OnRep_Inventory();

@@ -19,12 +19,10 @@ void AItemPickup::OnInteract(ACharacter* Character)
 
         if (PlayerState != nullptr)
         {
-            FInventoryObject PickupItem;
-            PickupItem.Name = PickupName;
+            FInventoryObject PickupItem = *Object.GetRow<FInventoryObject>(*GetNameSafe(this));
+            PlayerState->TryPickupObject(PickupItem);
 
-            PlayerState->Inventory.Add(PickupItem);
-
-            UE_LOG(LogVD, Display, TEXT("%s picked up a %s"), *Character->GetName(), *PickupName);
+            UE_LOG(LogVD, Display, TEXT("%s picked up a %s"), *Character->GetName(), *PickupItem.Name);
         }
     }
 }
