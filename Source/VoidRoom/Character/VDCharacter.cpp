@@ -316,8 +316,30 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 
 	return false;
 }
+// Networked functions
 
-void AVDCharacter::CarryObject(AInteractiveActor* Target)
+bool AVDCharacter::ServerInteract_Validate(AActor* Target)
+{
+	// TODO: Test if the target can actually be interacted with
+
+	return true;
+}
+
+void AVDCharacter::ServerInteract_Implementation(AActor* Target)
+{
+	if (Target != nullptr)
+	{
+		AInteractiveActor* InteractiveActor = Cast<AInteractiveActor>(Target);
+
+		if (InteractiveActor != nullptr)
+		{
+			InteractiveActor->MulticastInteract(this);
+			CarryObject(InteractiveActor);
+		}
+	}
+}
+
+void AVDCharacter::CarryObject_Implementation(AInteractiveActor* Target)
 {
 	if (Target != nullptr)
 	{
@@ -338,29 +360,6 @@ void AVDCharacter::CarryObject(AInteractiveActor* Target)
 				CarrierConstraint->BreakConstraint();
 				bIsCarryingObject = false;
 			}
-		}
-	}
-}
-
-// Networked functions
-
-bool AVDCharacter::ServerInteract_Validate(AActor* Target)
-{
-	// TODO: Test if the target can actually be interacted with
-
-	return true;
-}
-
-void AVDCharacter::ServerInteract_Implementation(AActor* Target)
-{
-	if (Target != nullptr)
-	{
-		AInteractiveActor* InteractiveActor = Cast<AInteractiveActor>(Target);
-
-		if (InteractiveActor != nullptr)
-		{
-			InteractiveActor->MulticastInteract(this);
-			CarryObject(InteractiveActor);
 		}
 	}
 }
