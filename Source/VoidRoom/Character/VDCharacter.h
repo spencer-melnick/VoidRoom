@@ -71,7 +71,7 @@ public:
 	float MaxLedgeAngle = 30.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float ClimbForwardDistance = 20.f;
-	UPROPERTY(ReadAnywhere, BlueprintReadOnly, Category = Gameplay)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Gameplay)
 	bool bIsCarryingObject = false;
 
 protected:
