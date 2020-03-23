@@ -71,7 +71,7 @@ public:
 	float MaxLedgeAngle = 30.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float ClimbForwardDistance = 20.f;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Gameplay)
+	UPROPERTY(ReadAnywhere, BlueprintReadOnly, Category = Gameplay)
 	bool bIsCarryingObject = false;
 
 protected:
@@ -90,9 +90,11 @@ protected:
 	UFUNCTION(Reliable, Server, WithValidation)
 	void ServerInteract(AActor* Target);
 	UFUNCTION(Reliable, NetMulticast)
-	void CarryObject(AInteractiveActor* Target);
+	void MulticastCarryObject(AInteractiveActor* Target);
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerDropObject();
 	UFUNCTION(Reliable, NetMulticast)
-	void DropObject();
+	void MulticastDropObject();
 
 
 private:

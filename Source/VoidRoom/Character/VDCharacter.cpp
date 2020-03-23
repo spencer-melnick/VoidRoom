@@ -162,8 +162,9 @@ void AVDCharacter::ToggleCrouch()
 
 void AVDCharacter::Interact()
 {
-	if(bIsCarryingObject) {
-		DropObject();
+	if (bIsCarryingObject)
+	{
+		ServerDropObject();
 	}
 	else if (FocusedActor != nullptr)
 	{
@@ -347,16 +348,20 @@ void AVDCharacter::ServerInteract_Implementation(AActor* Target)
 
 		if (InteractiveActor != nullptr)
 		{
-			InteractiveActor->MulticastInteract(this);
-
-			// TODO: Check if object is interactable or carryable
-			
-			CarryObject(InteractiveActor);
+			if (InteractiveActor->ActorHasTag("PhysicsPickup"))
+			{
+				UE_LOG(LogVD, Display, TEXT("%s is carrying %s"), *GetNameSafe(this), *GetNameSafe(InteractiveActor));
+				MulticastCarryObject(InteractiveActor);
+			}
+			else
+			{
+				InteractiveActor->MulticastInteract(this);
+			}
 		}
 	}
 }
 
-void AVDCharacter::CarryObject_Implementation(AInteractiveActor* Target)
+void AVDCharacter::MulticastCarryObject_Implementation(AInteractiveActor* Target)
 {
 	if (Target != nullptr)
 	{
@@ -372,7 +377,19 @@ void AVDCharacter::CarryObject_Implementation(AInteractiveActor* Target)
 	}
 }
 
-void AVDCharacter::DropObject_Implementation()
+bool AVDCharacter::ServerDropObject_Validate()
+{
+	// TODO: Add some validation check
+
+	return true;
+}
+
+void AVDCharacter::ServerDropObject_Implementation()
+{
+	MulticastDropObject();
+}
+
+void AVDCharacter::MulticastDropObject_Implementation()
 {
 	CarrierConstraint->BreakConstraint();
 	bIsCarryingObject = false;
