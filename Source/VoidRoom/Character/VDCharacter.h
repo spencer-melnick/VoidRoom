@@ -48,6 +48,9 @@ public:
 
 	void Interact();
 	void TryClimbLedge();
+
+	UFUNCTION()
+	void DropListener(int32 ConstraintIndex);
 	
 	// Editor properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
@@ -88,6 +91,8 @@ protected:
 	void ServerInteract(AActor* Target);
 	UFUNCTION(Reliable, NetMulticast)
 	void CarryObject(AInteractiveActor* Target);
+	UFUNCTION(Reliable, NetMulticast)
+	void DropObject();
 
 
 private:

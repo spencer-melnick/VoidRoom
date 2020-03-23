@@ -162,7 +162,10 @@ void AVDCharacter::ToggleCrouch()
 
 void AVDCharacter::Interact()
 {
-	if (FocusedActor != nullptr)
+	if(bIsCarryingObject) {
+		DropObject();
+	}
+	else if (FocusedActor != nullptr)
 	{
 		ServerInteract(FocusedActor);
 	}
@@ -179,11 +182,22 @@ void AVDCharacter::TryClimbLedge()
 	}
 }
 
+void AVDCharacter::DropListener(int32 ConstraintIndex)
+{
+	bIsCarryingObject = false;
+	UE_LOG(LogVD, Warning, TEXT("%s's constraint was broken by force. ConstraintIndex = %d"), *GetNameSafe(this), ConstraintIndex);
+
+}
+
 
 // Overrides of protected interface
 
 void AVDCharacter::BeginPlay()
 {
+	//Listen for event
+	CarrierConstraint->OnConstraintBroken.AddDynamic(this, &AVDCharacter::DropListener);
+
+
 	Super::BeginPlay();
 	
 }
@@ -334,6 +348,9 @@ void AVDCharacter::ServerInteract_Implementation(AActor* Target)
 		if (InteractiveActor != nullptr)
 		{
 			InteractiveActor->MulticastInteract(this);
+
+			// TODO: Check if object is interactable or carryable
+			
 			CarryObject(InteractiveActor);
 		}
 	}
@@ -346,20 +363,17 @@ void AVDCharacter::CarryObject_Implementation(AInteractiveActor* Target)
 		UPrimitiveComponent* TargetComponent = FindComponentByClass<UPrimitiveComponent>();
 		if (TargetComponent != nullptr)
 		{
-			//CarrierConstraint = NewObject<UPhysicsConstraintComponent>(this);
-			if (!bIsCarryingObject) {
-				//CarrierConstraint->SetupAttachment(GetRootComponent());
-				CarrierConstraint->ConstraintActor1 = Target;
-				CarrierConstraint->ConstraintActor2 = this;
-				CarrierConstraint->ComponentName2 = FConstrainComponentPropName{ LookRotator->GetFName() };
-				CarrierConstraint->InitComponentConstraint();
-				bIsCarryingObject = true;
-			}
-			else
-			{
-				CarrierConstraint->BreakConstraint();
-				bIsCarryingObject = false;
-			}
+			CarrierConstraint->ConstraintActor1 = Target;
+			CarrierConstraint->ConstraintActor2 = this;
+			CarrierConstraint->ComponentName2 = FConstrainComponentPropName{ LookRotator->GetFName() };
+			CarrierConstraint->InitComponentConstraint();
+			bIsCarryingObject = true;
 		}
 	}
+}
+
+void AVDCharacter::DropObject_Implementation()
+{
+	CarrierConstraint->BreakConstraint();
+	bIsCarryingObject = false;
 }
