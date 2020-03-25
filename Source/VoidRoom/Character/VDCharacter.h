@@ -25,6 +25,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual bool CanJumpInternal_Implementation() const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Bound events
 	UFUNCTION()
@@ -90,6 +91,8 @@ protected:
 	bool CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation);
 
 	// Networked functions
+	UFUNCTION(Unreliable, Server, WithValidation)
+	void ServerSetLookPitch(float NewPitch);
 	UFUNCTION(Reliable, Server, WithValidation)
 	void ServerInteract(AActor* Target);
 	UFUNCTION(Reliable, NetMulticast)
@@ -117,4 +120,6 @@ private:
 	// Normal operating variables
 	// UPROPERTY(Replicated)
 	AActor* FocusedActor = nullptr;
+	UPROPERTY(Replicated)
+	float LookPitch;
 };

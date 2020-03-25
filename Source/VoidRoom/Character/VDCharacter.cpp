@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
+#include "Net/UnrealNetwork.h"
 
 #include "../VoidRoom.h"
 #include "../Gameplay/Interactive/InteractiveActor.h"
@@ -116,6 +117,14 @@ bool AVDCharacter::CanJumpInternal_Implementation() const
 	}
 	return bCanJump;
 }
+
+void AVDCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AVDCharacter, LookPitch)
+}
+
 
 // VD public interface
 
@@ -228,8 +237,16 @@ void AVDCharacter::AdjustEyeHeight()
 
 void AVDCharacter::UpdateViewRotation()
 {
-	FRotator ControlRotation = GetControlRotation();
-	GetViewAttachment()->SetRelativeRotation(FRotator(ControlRotation.Pitch, 0.f, 0.f));
+	if (IsLocallyControlled())
+	{
+		FRotator ControlRotation = GetControlRotation();
+		GetViewAttachment()->SetRelativeRotation(FRotator(ControlRotation.Pitch, 0.f, 0.f));
+		ServerSetLookPitch(ControlRotation.Pitch);
+	}
+	else
+	{
+		GetViewAttachment()->SetRelativeRotation(FRotator(LookPitch, 0.f, 0.f));
+	}
 }
 
 void AVDCharacter::CheckFocus()
@@ -343,6 +360,16 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 }
 // Networked functions
 
+bool AVDCharacter::ServerSetLookPitch_Validate(float NewPitch)
+{
+	return true;
+}
+
+void AVDCharacter::ServerSetLookPitch_Implementation(float NewPitch)
+{
+	LookPitch = NewPitch;
+}
+
 bool AVDCharacter::ServerInteract_Validate(AActor* Target)
 {
 	// TODO: Test if the target can actually be interacted with
@@ -379,8 +406,7 @@ void AVDCharacter::MulticastCarryObject_Implementation(AInteractiveActor* Target
 		if (TargetComponent != nullptr)
 		{
 			CarrierConstraint->ConstraintActor1 = Target;
-			CarrierConstraint->ConstraintActor2 = this;
-			CarrierConstraint->ComponentName2 = FConstrainComponentPropName{ LookRotator->GetFName() };
+			CarrierConstraint->OverrideComponent2 = LookRotator;
 			CarrierConstraint->InitComponentConstraint();
 			
 			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame1, FVector(0.0f));
