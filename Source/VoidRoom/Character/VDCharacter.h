@@ -41,6 +41,7 @@ public:
 	float GetCurrentEyeHeightFromGround() const;
 	FVector GetViewLocation() const;
 	AActor* GetFocusedActor() const;
+	bool GetCanFocus() const;
 
 	void StartCrouch();
 	void StartUncrouch();
@@ -74,7 +75,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Gameplay)
 	bool bIsCarryingObject = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
-	float CarryDistance = 15.0f;
+	float CarryDistance = 150.0f;
 
 protected:
 	// Protected engine overrides

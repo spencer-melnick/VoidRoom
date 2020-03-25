@@ -4,6 +4,7 @@
 #include "VDCharacter.h"
 
 #include "Math/UnrealMathUtility.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -143,6 +144,11 @@ AActor* AVDCharacter::GetFocusedActor() const
 	return FocusedActor;
 }
 
+bool AVDCharacter::GetCanFocus() const
+{
+	return !bIsCarryingObject;
+}
+
 
 
 void AVDCharacter::StartCrouch()
@@ -228,18 +234,22 @@ void AVDCharacter::UpdateViewRotation()
 
 void AVDCharacter::CheckFocus()
 {
-	// Setup line trace start and end
-	FVector TraceStart = ViewAttachment->GetComponentLocation();
-	FVector TraceOffset = ViewAttachment->GetComponentRotation().RotateVector(FVector::ForwardVector);
-	TraceOffset *= MaxFocusDistance;
-	FVector TraceEnd = TraceStart + TraceOffset;
-
-	// Perform trace against visibility channel
 	AActor* HitActor = nullptr;
-	FHitResult HitResult;
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility))
+
+	if (GetCanFocus())
 	{
-		HitActor = HitResult.GetActor();
+		// Setup line trace start and end
+		FVector TraceStart = ViewAttachment->GetComponentLocation();
+		FVector TraceOffset = ViewAttachment->GetComponentRotation().RotateVector(FVector::ForwardVector);
+		TraceOffset *= MaxFocusDistance;
+		FVector TraceEnd = TraceStart + TraceOffset;
+
+		// Perform trace against visibility channel
+		FHitResult HitResult;
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility))
+		{
+			HitActor = HitResult.GetActor();
+		}
 	}
 
 	// If we're looking at a new actor
@@ -374,7 +384,7 @@ void AVDCharacter::MulticastCarryObject_Implementation(AInteractiveActor* Target
 			CarrierConstraint->InitComponentConstraint();
 			
 			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame1, FVector(0.0f));
-			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame2, FVector(CarryDistance * 10.0f, 0.0f, 0.0f));
+			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame2, FVector::ForwardVector * CarryDistance);
 			CarrierConstraint->UpdateConstraintFrames();
 
 			bIsCarryingObject = true;
@@ -396,6 +406,14 @@ void AVDCharacter::ServerDropObject_Implementation()
 
 void AVDCharacter::MulticastDropObject_Implementation()
 {
+	TInlineComponentArray<UPrimitiveComponent*> PrimitiveComponents;
+	CarrierConstraint->ConstraintActor1->GetComponents(PrimitiveComponents);
+
+	for (auto& PrimitiveComponent : PrimitiveComponents)
+	{
+		PrimitiveComponent->WakeAllRigidBodies();
+	}
+	
 	CarrierConstraint->BreakConstraint();
 	bIsCarryingObject = false;
 }
