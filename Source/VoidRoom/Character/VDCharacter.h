@@ -73,6 +73,8 @@ public:
 	float ClimbForwardDistance = 20.f;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Gameplay)
 	bool bIsCarryingObject = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	float CarryDistance = 15.0f;
 
 protected:
 	// Protected engine overrides
@@ -105,6 +107,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	UPhysicsConstraintComponent* CarrierConstraint;
+	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	USphereComponent* LookRotator;
 	
 	// Cached component casts

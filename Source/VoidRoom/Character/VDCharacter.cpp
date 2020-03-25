@@ -372,6 +372,11 @@ void AVDCharacter::MulticastCarryObject_Implementation(AInteractiveActor* Target
 			CarrierConstraint->ConstraintActor2 = this;
 			CarrierConstraint->ComponentName2 = FConstrainComponentPropName{ LookRotator->GetFName() };
 			CarrierConstraint->InitComponentConstraint();
+			
+			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame1, FVector(0.0f));
+			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame2, FVector(CarryDistance * 10.0f, 0.0f, 0.0f));
+			CarrierConstraint->UpdateConstraintFrames();
+
 			bIsCarryingObject = true;
 		}
 	}
