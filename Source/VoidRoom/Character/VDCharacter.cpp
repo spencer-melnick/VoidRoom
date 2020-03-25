@@ -4,13 +4,15 @@
 #include "VDCharacter.h"
 
 #include "Math/UnrealMathUtility.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
+#include "Net/UnrealNetwork.h"
 
 #include "../VoidRoom.h"
-#include "../Gameplay/InteractiveActor.h"
+#include "../Gameplay/Interactive/InteractiveActor.h"
 
 AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVDCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -22,12 +24,19 @@ AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	ViewAttachment = CreateDefaultSubobject<USceneComponent>(TEXT("ViewAttachment"));
 	ViewAttachment->SetupAttachment(GetRootComponent());
 
+	//Spawn physical representation of view attachment
+	LookRotator = CreateDefaultSubobject <USphereComponent>(TEXT("LookRotator"));
+	LookRotator->SetupAttachment(ViewAttachment);
+
+	CarrierConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CarrierConstraint"));
+	CarrierConstraint->SetupAttachment(GetRootComponent());
+	
 	// Spawn first person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(ViewAttachment);
 	FirstPersonCamera->FieldOfView = 90.f;
 	UpdateViewRotation();
-
+	
 	// Set movement component parameters
 	UCharacterMovementComponent* MovementComponent = Cast<UCharacterMovementComponent>(GetMovementComponent());
 	if (MovementComponent == nullptr)
@@ -79,6 +88,42 @@ void AVDCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* O
 
 }
 
+bool AVDCharacter::CanJumpInternal_Implementation() const
+{
+	bool bCanJump = true;
+	if (bCanJump)
+	{
+		// Ensure JumpHoldTime and JumpCount are valid.
+		if (!bWasJumping || GetJumpMaxHoldTime() <= 0.0f)
+		{
+			if (JumpCurrentCount == 0 && GetCharacterMovement()->IsFalling())
+			{
+				bCanJump = JumpCurrentCount + 1 < JumpMaxCount;
+			}
+			else
+			{
+				bCanJump = JumpCurrentCount < JumpMaxCount;
+			}
+		}
+		else
+		{
+			// Only consider JumpKeyHoldTime as long as:
+			// A) The jump limit hasn't been met OR
+			// B) The jump limit has been met AND we were already jumping
+			const bool bJumpKeyHeld = (bPressedJump && JumpKeyHoldTime < GetJumpMaxHoldTime());
+			bCanJump = bJumpKeyHeld &&
+						((JumpCurrentCount < JumpMaxCount) || (bWasJumping && JumpCurrentCount == JumpMaxCount));
+		}
+	}
+	return bCanJump;
+}
+
+void AVDCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AVDCharacter, LookPitch)
+}
 
 
 // VD public interface
@@ -108,6 +153,11 @@ AActor* AVDCharacter::GetFocusedActor() const
 	return FocusedActor;
 }
 
+bool AVDCharacter::GetCanFocus() const
+{
+	return !bIsCarryingObject;
+}
+
 
 
 void AVDCharacter::StartCrouch()
@@ -127,7 +177,11 @@ void AVDCharacter::ToggleCrouch()
 
 void AVDCharacter::Interact()
 {
-	if (FocusedActor != nullptr)
+	if (bIsCarryingObject)
+	{
+		ServerDropObject();
+	}
+	else if (FocusedActor != nullptr)
 	{
 		ServerInteract(FocusedActor);
 	}
@@ -144,11 +198,22 @@ void AVDCharacter::TryClimbLedge()
 	}
 }
 
+void AVDCharacter::DropListener(int32 ConstraintIndex)
+{
+	bIsCarryingObject = false;
+	UE_LOG(LogVD, Warning, TEXT("%s's constraint was broken by force. ConstraintIndex = %d"), *GetNameSafe(this), ConstraintIndex);
+
+}
+
 
 // Overrides of protected interface
 
 void AVDCharacter::BeginPlay()
 {
+	//Listen for event
+	CarrierConstraint->OnConstraintBroken.AddDynamic(this, &AVDCharacter::DropListener);
+
+
 	Super::BeginPlay();
 	
 }
@@ -172,24 +237,36 @@ void AVDCharacter::AdjustEyeHeight()
 
 void AVDCharacter::UpdateViewRotation()
 {
-	FRotator ControlRotation = GetControlRotation();
-	GetViewAttachment()->SetRelativeRotation(FRotator(ControlRotation.Pitch, 0.f, 0.f));
+	if (IsLocallyControlled())
+	{
+		FRotator ControlRotation = GetControlRotation();
+		GetViewAttachment()->SetRelativeRotation(FRotator(ControlRotation.Pitch, 0.f, 0.f));
+		ServerSetLookPitch(ControlRotation.Pitch);
+	}
+	else
+	{
+		GetViewAttachment()->SetRelativeRotation(FRotator(LookPitch, 0.f, 0.f));
+	}
 }
 
 void AVDCharacter::CheckFocus()
 {
-	// Setup line trace start and end
-	FVector TraceStart = ViewAttachment->GetComponentLocation();
-	FVector TraceOffset = ViewAttachment->GetComponentRotation().RotateVector(FVector::ForwardVector);
-	TraceOffset *= MaxFocusDistance;
-	FVector TraceEnd = TraceStart + TraceOffset;
-
-	// Perform trace against visibility channel
 	AActor* HitActor = nullptr;
-	FHitResult HitResult;
-	if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility))
+
+	if (GetCanFocus())
 	{
-		HitActor = HitResult.GetActor();
+		// Setup line trace start and end
+		FVector TraceStart = ViewAttachment->GetComponentLocation();
+		FVector TraceOffset = ViewAttachment->GetComponentRotation().RotateVector(FVector::ForwardVector);
+		TraceOffset *= MaxFocusDistance;
+		FVector TraceEnd = TraceStart + TraceOffset;
+
+		// Perform trace against visibility channel
+		FHitResult HitResult;
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECollisionChannel::ECC_Visibility))
+		{
+			HitActor = HitResult.GetActor();
+		}
 	}
 
 	// If we're looking at a new actor
@@ -281,8 +358,17 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 
 	return false;
 }
-
 // Networked functions
+
+bool AVDCharacter::ServerSetLookPitch_Validate(float NewPitch)
+{
+	return true;
+}
+
+void AVDCharacter::ServerSetLookPitch_Implementation(float NewPitch)
+{
+	LookPitch = NewPitch;
+}
 
 bool AVDCharacter::ServerInteract_Validate(AActor* Target)
 {
@@ -299,7 +385,61 @@ void AVDCharacter::ServerInteract_Implementation(AActor* Target)
 
 		if (InteractiveActor != nullptr)
 		{
-			InteractiveActor->MulticastInteract(this);
+			if (InteractiveActor->ActorHasTag("PhysicsPickup"))
+			{
+				UE_LOG(LogVD, Display, TEXT("%s is carrying %s"), *GetNameSafe(this), *GetNameSafe(InteractiveActor));
+				MulticastCarryObject(InteractiveActor);
+			}
+			else
+			{
+				InteractiveActor->MulticastInteract(this);
+			}
 		}
 	}
+}
+
+void AVDCharacter::MulticastCarryObject_Implementation(AInteractiveActor* Target)
+{
+	if (Target != nullptr)
+	{
+		UPrimitiveComponent* TargetComponent = FindComponentByClass<UPrimitiveComponent>();
+		if (TargetComponent != nullptr)
+		{
+			CarrierConstraint->ConstraintActor1 = Target;
+			CarrierConstraint->OverrideComponent2 = LookRotator;
+			CarrierConstraint->InitComponentConstraint();
+			
+			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame1, FVector(0.0f));
+			CarrierConstraint->SetConstraintReferencePosition(EConstraintFrame::Frame2, FVector::ForwardVector * CarryDistance);
+			CarrierConstraint->UpdateConstraintFrames();
+
+			bIsCarryingObject = true;
+		}
+	}
+}
+
+bool AVDCharacter::ServerDropObject_Validate()
+{
+	// TODO: Add some validation check
+
+	return true;
+}
+
+void AVDCharacter::ServerDropObject_Implementation()
+{
+	MulticastDropObject();
+}
+
+void AVDCharacter::MulticastDropObject_Implementation()
+{
+	TInlineComponentArray<UPrimitiveComponent*> PrimitiveComponents;
+	CarrierConstraint->ConstraintActor1->GetComponents(PrimitiveComponents);
+
+	for (auto& PrimitiveComponent : PrimitiveComponents)
+	{
+		PrimitiveComponent->WakeAllRigidBodies();
+	}
+	
+	CarrierConstraint->BreakConstraint();
+	bIsCarryingObject = false;
 }

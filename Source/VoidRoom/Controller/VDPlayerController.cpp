@@ -23,12 +23,28 @@ void AVDPlayerController::SetupInputComponent()
     InputComponent->BindAxis("LookRight", this, &AVDPlayerController::AddYawInput);
 
     // Bind actions
+    InputComponent->BindAction("Jump", EInputEvent::IE_Pressed, this, &AVDPlayerController::Jump);
+    InputComponent->BindAction("Jump", EInputEvent::IE_Released, this, &AVDPlayerController::EndJump);
+
     InputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &AVDPlayerController::Crouch);
     InputComponent->BindAction("Crouch", EInputEvent::IE_Released, this, &AVDPlayerController::UnCrouch);
+
     InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
-    InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
+    //InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
 }
 
+
+void AVDPlayerController::BeginPlay()
+{
+    Super::BeginPlay();
+
+	UIWidget = CreateWidget<UUserWidget>(this, UIClass);
+
+	if (UIWidget != nullptr)
+	{
+        UIWidget->AddToPlayerScreen(1);
+	}
+}
 
 
 // Protected VD interface
@@ -50,6 +66,26 @@ void AVDPlayerController::MoveRight(float Scale)
     if (PossessedPawn)
     {
         PossessedPawn->AddMovementInput(PossessedPawn->GetActorRightVector() * Scale);
+    }
+}
+
+void AVDPlayerController::Jump()
+{
+    AVDCharacter* PossessedPawn = Cast<AVDCharacter>(GetPawn());
+
+    if (PossessedPawn)
+    {
+        PossessedPawn->Jump();
+    }
+}
+
+void AVDPlayerController::EndJump()
+{
+    AVDCharacter* PossessedPawn = Cast<AVDCharacter>(GetPawn());
+
+    if (PossessedPawn)
+    {
+        PossessedPawn->StopJumping();
     }
 }
 

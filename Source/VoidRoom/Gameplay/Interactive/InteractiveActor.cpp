@@ -4,7 +4,7 @@
 #include "InteractiveActor.h"
 
 #include "Components/MeshComponent.h"
-#include "../VoidRoom.h"
+#include "../../VoidRoom.h"
 
 AInteractiveActor::AInteractiveActor(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

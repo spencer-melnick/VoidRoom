@@ -5,8 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Camera/CameraComponent.h"
+#include "PhysicsEngine/PhysicsConstraintComponent.h"
 
 #include "VDCharacterMovementComponent.h"
+#include "../Gameplay/Interactive/InteractiveActor.h"
+#include "Components/SphereComponent.h"
 
 #include "VDCharacter.generated.h"
 
@@ -21,6 +24,8 @@ public:
 	// Public engine overrides
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual bool CanJumpInternal_Implementation() const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Bound events
 	UFUNCTION()
@@ -31,11 +36,13 @@ public:
 	// VD interfaces
 	USceneComponent* GetViewAttachment() const;
 	UCameraComponent* GetFirstPersonCamera() const;
+	
 	UVDCharacterMovementComponent* GetCharacterMovementComponent() const;
 	float GetCurrentEyeHeightFromCenter() const;
 	float GetCurrentEyeHeightFromGround() const;
 	FVector GetViewLocation() const;
 	AActor* GetFocusedActor() const;
+	bool GetCanFocus() const;
 
 	void StartCrouch();
 	void StartUncrouch();
@@ -44,6 +51,9 @@ public:
 	void Interact();
 	void TryClimbLedge();
 
+	UFUNCTION()
+	void DropListener(int32 ConstraintIndex);
+	
 	// Editor properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = View)
 	float CrouchSpeed = 300.f;
@@ -63,6 +73,10 @@ public:
 	float MaxLedgeAngle = 30.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Control)
 	float ClimbForwardDistance = 20.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Gameplay)
+	bool bIsCarryingObject = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	float CarryDistance = 150.0f;
 
 protected:
 	// Protected engine overrides
@@ -77,18 +91,35 @@ protected:
 	bool CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation);
 
 	// Networked functions
+	UFUNCTION(Unreliable, Server, WithValidation)
+	void ServerSetLookPitch(float NewPitch);
 	UFUNCTION(Reliable, Server, WithValidation)
 	void ServerInteract(AActor* Target);
+	UFUNCTION(Reliable, NetMulticast)
+	void MulticastCarryObject(AInteractiveActor* Target);
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerDropObject();
+	UFUNCTION(Reliable, NetMulticast)
+	void MulticastDropObject();
+
 
 private:
 	// Attached components
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
 
+
+	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
+	UPhysicsConstraintComponent* CarrierConstraint;
+	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
+	USphereComponent* LookRotator;
+	
 	// Cached component casts
 	UVDCharacterMovementComponent* CharacterMovementComponent;
 
 	// Normal operating variables
 	// UPROPERTY(Replicated)
 	AActor* FocusedActor = nullptr;
+	UPROPERTY(Replicated)
+	float LookPitch;
 };

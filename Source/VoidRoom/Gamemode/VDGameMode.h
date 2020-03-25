@@ -13,5 +13,8 @@ UCLASS()
 class VOIDROOM_API AVDGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
+
+public:
+	AVDGameMode();
 	
 };
