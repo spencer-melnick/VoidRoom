@@ -11,6 +11,8 @@ AInteractiveActor::AInteractiveActor(const FObjectInitializer& ObjectInitializer
 {
 	// Interactive objects should replicate themselves
 	bReplicates = true;
+	bReplicateMovement = true;
+	GetReplicatedMovement_Mutable().bRepPhysics = true;
 }
 
 
