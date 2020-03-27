@@ -10,10 +10,10 @@ void UInventoryItemWidget::SynchronizeProperties()
 	UpdateDisplay();
 }
 
-void UInventoryItemWidget::SetObject(FInventorySlot NewObject)
+void UInventoryItemWidget::SetInventorySlot(FInventorySlot NewSlot)
 {
 	bIsEmpty = false;
-	Object = NewObject;
+	InventorySlot = NewSlot;
 
 	UpdateDisplay();
 }
@@ -21,7 +21,7 @@ void UInventoryItemWidget::SetObject(FInventorySlot NewObject)
 void UInventoryItemWidget::SetEmpty()
 {
 	bIsEmpty = true;
-	Object = FInventorySlot();
+	InventorySlot = FInventorySlot();
 
 	UpdateDisplay();
 }
@@ -31,9 +31,9 @@ void UInventoryItemWidget::UpdateDisplay()
 {
 	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
-		if (!bIsEmpty && Object.Object.IsValid())
+		if (!bIsEmpty && InventorySlot.Object.IsValid())
 		{
-			UInventoryObject* ObjectInstance = Object.Object.Get();
+			UInventoryObject* ObjectInstance = InventorySlot.Object.Get();
 			
 			if (ObjectInstance->IconTexture.IsValid())
 			{

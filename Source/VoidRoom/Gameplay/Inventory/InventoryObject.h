@@ -10,7 +10,7 @@
 #include "InventoryObject.generated.h"
 
 UENUM(BlueprintType)
-enum class EInventoryDuplicationType : uint8
+enum class EInventoryDuplicationRule : uint8
 {
 	Unique,			// You can only pick up one of a unique object
 	Multiple,		// You can have duplicates of a "multiple" object
@@ -30,5 +30,5 @@ public:
 	TSoftObjectPtr<UTexture2D> IconTexture;
 
 	UPROPERTY(EditAnywhere)
-	EInventoryDuplicationType DuplicationType;
+	EInventoryDuplicationRule DuplicationRule;
 };

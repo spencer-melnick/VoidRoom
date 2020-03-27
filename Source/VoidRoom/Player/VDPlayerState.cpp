@@ -17,9 +17,9 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 {
 	UInventoryObject* ObjectInstance = Object.Get();
 	
-	switch(Object->DuplicationType)
+	switch(Object->DuplicationRule)
 	{
-		case EInventoryDuplicationType::Unique:
+		case EInventoryDuplicationRule::Unique:
 			{
 				bool bWasDuplicateFound = false;
 				
@@ -46,7 +46,7 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 			}
 			break;
 
-		case EInventoryDuplicationType::Stack:
+		case EInventoryDuplicationRule::Stack:
 			{
 				bool bWasDuplicateFound = false;
 
@@ -69,7 +69,7 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 			}
 			break;
 
-		case EInventoryDuplicationType::Multiple:
+		case EInventoryDuplicationRule::Multiple:
 			{
 				FInventorySlot Slot;
 				Slot.Object = Object;

@@ -45,7 +45,7 @@ void UInventoryGridWidget::UpdateDisplay()
 	{
 		if (i < PlayerState->Inventory.Num())
 		{
-			ItemWidgets[i]->SetObject(PlayerState->Inventory[i]);
+			ItemWidgets[i]->SetInventorySlot(PlayerState->Inventory[i]);
 		}
 		else
 		{

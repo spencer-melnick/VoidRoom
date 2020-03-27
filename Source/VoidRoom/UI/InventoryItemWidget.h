@@ -30,7 +30,7 @@ public:
 	void SynchronizeProperties() override;
 
 	// Public functions
-	void SetObject(FInventorySlot NewObject);
+	void SetInventorySlot(FInventorySlot NewSlot);
 	void SetEmpty();
 	
 	// Child widgets
@@ -44,5 +44,5 @@ private:
 	void UpdateDisplay();
 
 	bool bIsEmpty = true;
-	FInventorySlot Object;
+	FInventorySlot InventorySlot;
 };
