@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-
 #include "Engine/Texture2D.h"
+
+#include "VoidRoom/Gameplay/Inventory/InventoryBehavior.h"
 
 #include "InventoryObject.generated.h"
 
@@ -28,6 +29,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	TSoftObjectPtr<UTexture2D> IconTexture;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UInventoryBehavior> InventoryBehavior;
 
 	UPROPERTY(EditAnywhere)
 	EInventoryDuplicationRule DuplicationRule;

@@ -38,4 +38,6 @@ public:
 protected:
 	UFUNCTION()
 	virtual void OnRep_Inventory();
+
+	void TryHandlePickup(TSoftObjectPtr<UInventoryObject> Object);
 };

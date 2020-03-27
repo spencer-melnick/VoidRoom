@@ -37,6 +37,7 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 					FInventorySlot Slot;
 					Slot.Object = Object;
 					Inventory.Add(Slot);
+					TryHandlePickup(Object);
 				}
 				else
 				{
@@ -65,6 +66,7 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 					FInventorySlot Slot;
 					Slot.Object = Object;
 					Inventory.Add(Slot);
+					TryHandlePickup(Object);
 				}
 			}
 			break;
@@ -74,6 +76,7 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 				FInventorySlot Slot;
 				Slot.Object = Object;
 				Inventory.Add(Slot);
+				TryHandlePickup(Object);
 			}
 			break;
 	}
@@ -85,3 +88,22 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 void AVDPlayerState::OnRep_Inventory() {
     // Do something here!
 }
+
+void AVDPlayerState::TryHandlePickup(TSoftObjectPtr<UInventoryObject> Object)
+{
+	if (Object.IsValid())
+	{
+		UInventoryObject* ObjectInstance = Object.Get();
+
+		if (ObjectInstance->InventoryBehavior != nullptr)
+		{
+			UInventoryBehavior* BehaviorInstance = ObjectInstance->InventoryBehavior.GetDefaultObject();
+
+			if (BehaviorInstance != nullptr)
+			{
+				BehaviorInstance->OnPickup(Object);
+			}
+		}
+	}
+}
+
