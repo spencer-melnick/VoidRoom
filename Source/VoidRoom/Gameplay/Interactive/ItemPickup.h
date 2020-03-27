@@ -23,5 +23,6 @@ public:
 	TSoftObjectPtr<UInventoryObject> Object;
 	
 protected:
-	virtual void OnInteract(ACharacter* Character);
+	virtual void OnInteract(ACharacter* Character) override;
+	virtual bool GetShouldRunOnAllClients() const override;
 };

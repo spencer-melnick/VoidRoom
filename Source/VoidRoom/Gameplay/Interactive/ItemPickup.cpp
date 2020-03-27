@@ -26,3 +26,7 @@ void AItemPickup::OnInteract(ACharacter* Character)
     }
 }
 
+bool AItemPickup::GetShouldRunOnAllClients() const
+{
+    return false;
+}
