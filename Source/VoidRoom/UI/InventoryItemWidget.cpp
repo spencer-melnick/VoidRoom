@@ -10,7 +10,7 @@ void UInventoryItemWidget::SynchronizeProperties()
 	UpdateDisplay();
 }
 
-void UInventoryItemWidget::SetObject(FInventoryObject NewObject)
+void UInventoryItemWidget::SetObject(FInventorySlot NewObject)
 {
 	bIsEmpty = false;
 	Object = NewObject;
@@ -21,7 +21,7 @@ void UInventoryItemWidget::SetObject(FInventoryObject NewObject)
 void UInventoryItemWidget::SetEmpty()
 {
 	bIsEmpty = true;
-	Object = FInventoryObject();
+	Object = FInventorySlot();
 
 	UpdateDisplay();
 }
@@ -31,19 +31,21 @@ void UInventoryItemWidget::UpdateDisplay()
 {
 	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
-		if (!bIsEmpty)
+		if (!bIsEmpty && Object.Object.IsValid())
 		{
-			if (Object.IconTexture.IsValid())
+			UInventoryObject* ObjectInstance = Object.Object.Get();
+			
+			if (ObjectInstance->IconTexture.IsValid())
 			{
 				DisplayImage->SetVisibility(ESlateVisibility::Visible);
-				DisplayImage->SetBrushFromTexture(Object.IconTexture.Get());
+				DisplayImage->SetBrushFromTexture(ObjectInstance->IconTexture.Get());
 			}
 			else
 			{
 				DisplayImage->SetVisibility(ESlateVisibility::Hidden);
 			}
 
-			DisplayText->SetText(FText::AsCultureInvariant(Object.Name));
+			DisplayText->SetText(FText::AsCultureInvariant(ObjectInstance->Name));
 		}
 		else
 		{

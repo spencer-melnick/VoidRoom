@@ -10,6 +10,18 @@
 /**
  * 
  */
+USTRUCT()
+struct FInventorySlot
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(EditAnywhere)
+	TSoftObjectPtr<UInventoryObject> Object;
+
+	UPROPERTY(EditAnywhere)
+	int Count = 1;
+};
+
 UCLASS()
 class VOIDROOM_API AVDPlayerState : public APlayerState
 {
@@ -19,9 +31,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UPROPERTY(EditAnywhere, Replicated)
-	TArray<FInventoryObject> Inventory;
+	TArray<FInventorySlot> Inventory;
 
-	bool TryPickupObject(FInventoryObject Object);
+	bool TryPickupObject(TSoftObjectPtr<UInventoryObject> Object);
 
 protected:
 	UFUNCTION()

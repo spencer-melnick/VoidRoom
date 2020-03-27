@@ -20,7 +20,7 @@ class VOIDROOM_API AItemPickup : public AInteractiveActor
 
 public:
 	UPROPERTY(EditAnywhere)
-	FDataTableRowHandle Object;
+	TSoftObjectPtr<UInventoryObject> Object;
 	
 protected:
 	virtual void OnInteract(ACharacter* Character);

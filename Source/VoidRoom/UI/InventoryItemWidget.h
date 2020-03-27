@@ -12,6 +12,7 @@
 
 // Game includes
 #include "../Gameplay/Inventory/InventoryObject.h"
+#include "VoidRoom/Player/VDPlayerState.h"
 
 // Generated header
 #include "InventoryItemWidget.generated.h"
@@ -29,7 +30,7 @@ public:
 	void SynchronizeProperties() override;
 
 	// Public functions
-	void SetObject(FInventoryObject NewObject);
+	void SetObject(FInventorySlot NewObject);
 	void SetEmpty();
 	
 	// Child widgets
@@ -43,5 +44,5 @@ private:
 	void UpdateDisplay();
 
 	bool bIsEmpty = true;
-	FInventoryObject Object;
+	FInventorySlot Object;
 };

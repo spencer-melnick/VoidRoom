@@ -13,17 +13,19 @@ void AVDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
     DOREPLIFETIME(AVDPlayerState, Inventory);
 }
 
-bool AVDPlayerState::TryPickupObject(FInventoryObject Object)
+bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 {
-	switch(Object.Type)
+	UInventoryObject* ObjectInstance = Object.Get();
+	
+	switch(Object->DuplicationType)
 	{
-		case EInventoryObjectType::Unique:
+		case EInventoryDuplicationType::Unique:
 			{
 				bool bWasDuplicateFound = false;
 				
 				for (auto& i : Inventory)
 				{
-					if (i.ID == Object.ID)
+					if (i.Object.GetUniqueID() == Object.GetUniqueID())
 					{
 						bWasDuplicateFound = true;
 						break;
@@ -32,7 +34,9 @@ bool AVDPlayerState::TryPickupObject(FInventoryObject Object)
 
 				if (!bWasDuplicateFound)
 				{
-					Inventory.Add(Object);
+					FInventorySlot Slot;
+					Slot.Object = Object;
+					Inventory.Add(Slot);
 				}
 				else
 				{
@@ -42,13 +46,13 @@ bool AVDPlayerState::TryPickupObject(FInventoryObject Object)
 			}
 			break;
 
-		case EInventoryObjectType::Stack:
+		case EInventoryDuplicationType::Stack:
 			{
 				bool bWasDuplicateFound = false;
 
 				for (auto& i : Inventory)
 				{
-					if (i.ID == Object.ID)
+					if (i.Object.GetUniqueID() == Object.GetUniqueID())
 					{
 						bWasDuplicateFound = true;
 						i.Count++;
@@ -58,13 +62,19 @@ bool AVDPlayerState::TryPickupObject(FInventoryObject Object)
 
 				if (!bWasDuplicateFound)
 				{
-					Inventory.Add(Object);
+					FInventorySlot Slot;
+					Slot.Object = Object;
+					Inventory.Add(Slot);
 				}
 			}
 			break;
 
-		case EInventoryObjectType::Multiple:
-			Inventory.Add(Object);
+		case EInventoryDuplicationType::Multiple:
+			{
+				FInventorySlot Slot;
+				Slot.Object = Object;
+				Inventory.Add(Slot);
+			}
 			break;
 	}
 
