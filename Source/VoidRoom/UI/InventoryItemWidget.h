@@ -9,6 +9,7 @@
 // Component includes
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Components/Button.h"
 
 // Game includes
 #include "../Gameplay/Inventory/InventoryObject.h"
@@ -32,6 +33,9 @@ public:
 	// Public functions
 	void SetInventorySlot(FInventorySlot NewSlot);
 	void SetEmpty();
+	void SetOwner(class UInventoryGridWidget* NewOwner);
+
+	void OnClicked();
 	
 	// Child widgets
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -40,9 +44,13 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	UImage* DisplayImage = nullptr;
 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UButton* MainButton = nullptr;
+
 private:
 	void UpdateDisplay();
 
 	bool bIsEmpty = true;
 	FInventorySlot InventorySlot;
+	class UInventoryGridWidget* Owner = nullptr;
 };

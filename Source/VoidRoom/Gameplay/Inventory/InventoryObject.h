@@ -28,6 +28,9 @@ public:
 	FText Name;
 
 	UPROPERTY(EditAnywhere)
+	FText Description;
+
+	UPROPERTY(EditAnywhere)
 	TSoftObjectPtr<UTexture2D> IconTexture;
 
 	UPROPERTY(EditAnywhere)

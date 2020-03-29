@@ -9,6 +9,8 @@
 // Component includes
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
+#include "Components/TextBlock.h"
+#include "Components/Image.h"
 
 // Game includes
 #include "InventoryItemWidget.h"
@@ -32,9 +34,16 @@ public:
 
 	// Public functions
 	void UpdateDisplay();
+	void SetActiveSlot(FInventorySlot Slot);
 	
 	
 	// Children widgets
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UTextBlock* DescriptionText = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UTextBlock* NameText = nullptr;
+	
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	UUniformGridPanel* InventoryPanel = nullptr;
 

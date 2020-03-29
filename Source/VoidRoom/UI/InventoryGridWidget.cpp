@@ -54,6 +54,18 @@ void UInventoryGridWidget::UpdateDisplay()
 	}
 }
 
+void UInventoryGridWidget::SetActiveSlot(FInventorySlot InventorySlot)
+{
+	if (NameText != nullptr && DescriptionText != nullptr && InventorySlot.Object.IsValid())
+	{
+		UInventoryObject* ObjectInstance = InventorySlot.Object.Get();
+
+		NameText->SetText(ObjectInstance->Name);
+		DescriptionText->SetText(ObjectInstance->Description);
+	}
+}
+
+
 
 void UInventoryGridWidget::RecreateGrid()
 {
@@ -74,6 +86,7 @@ void UInventoryGridWidget::RecreateGrid()
 				ItemGridSlot->SetVerticalAlignment(EVerticalAlignment::VAlign_Fill);
 
 				ItemWidgets.Add(InventoryItemWidget);
+				InventoryItemWidget->SetOwner(this);
 			}
 		}
 	}

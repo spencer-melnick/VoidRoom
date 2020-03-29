@@ -3,11 +3,20 @@
 
 #include "InventoryItemWidget.h"
 
+#include "VoidRoom/VoidRoom.h"
+#include "InventoryGridWidget.h"
+
 void UInventoryItemWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
 	
 	UpdateDisplay();
+	
+	if (MainButton != nullptr)
+	{
+		MainButton->OnClicked.Clear();
+		MainButton->OnClicked.AddDynamic(this, &UInventoryItemWidget::OnClicked);
+	}
 }
 
 void UInventoryItemWidget::SetInventorySlot(FInventorySlot NewSlot)
@@ -26,9 +35,26 @@ void UInventoryItemWidget::SetEmpty()
 	UpdateDisplay();
 }
 
+void UInventoryItemWidget::SetOwner(UInventoryGridWidget* NewOwner)
+{
+	Owner = NewOwner;
+}
+
+void UInventoryItemWidget::OnClicked()
+{
+	UE_LOG(LogVD, Display, TEXT("Button %s pressed!"), *GetNameSafe(this));
+	
+	if (!bIsEmpty && Owner != nullptr)
+	{
+		Owner->SetActiveSlot(InventorySlot);
+	}
+}
+
+
+
 
 void UInventoryItemWidget::UpdateDisplay()
-{
+{	
 	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
 		if (!bIsEmpty && InventorySlot.Object.IsValid())
@@ -39,18 +65,21 @@ void UInventoryItemWidget::UpdateDisplay()
 			{
 				DisplayImage->SetVisibility(ESlateVisibility::Visible);
 				DisplayImage->SetBrushFromTexture(ObjectInstance->IconTexture.Get());
+				
+				DisplayText->SetVisibility(ESlateVisibility::Hidden);
 			}
 			else
 			{
 				DisplayImage->SetVisibility(ESlateVisibility::Hidden);
-			}
 
-			DisplayText->SetText(FText::AsCultureInvariant(ObjectInstance->Name));
+				DisplayText->SetVisibility(ESlateVisibility::Visible);
+				DisplayText->SetText(ObjectInstance->Name);
+			}
 		}
 		else
 		{
 			DisplayImage->SetVisibility(ESlateVisibility::Hidden);
-			DisplayText->SetText(FText::AsCultureInvariant(""));
+			DisplayText->SetVisibility(ESlateVisibility::Hidden);
 		}
 	}
 }
