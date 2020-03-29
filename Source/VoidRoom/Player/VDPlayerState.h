@@ -16,7 +16,7 @@ struct FInventorySlot
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere)
-	TSoftObjectPtr<UInventoryObject> Object;
+	UInventoryObject* Object;
 
 	UPROPERTY(EditAnywhere)
 	int Count = 1;
@@ -33,11 +33,11 @@ public:
 	UPROPERTY(EditAnywhere, Replicated)
 	TArray<FInventorySlot> Inventory;
 
-	bool TryPickupObject(TSoftObjectPtr<UInventoryObject> Object);
+	bool TryPickupObject(UInventoryObject* Object);
 
 protected:
 	UFUNCTION()
 	virtual void OnRep_Inventory();
 
-	void AddToInventory(TSoftObjectPtr<UInventoryObject> Object);
+	void AddToInventory(UInventoryObject* Object);
 };

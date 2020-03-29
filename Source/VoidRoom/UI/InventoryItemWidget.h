@@ -35,6 +35,7 @@ public:
 	void SetEmpty();
 	void SetOwner(class UInventoryGridWidget* NewOwner);
 
+	UFUNCTION()
 	void OnClicked();
 	
 	// Child widgets

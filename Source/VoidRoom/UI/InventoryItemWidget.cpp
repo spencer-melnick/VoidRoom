@@ -11,12 +11,6 @@ void UInventoryItemWidget::SynchronizeProperties()
 	Super::SynchronizeProperties();
 	
 	UpdateDisplay();
-	
-	if (MainButton != nullptr)
-	{
-		MainButton->OnClicked.Clear();
-		MainButton->OnClicked.AddDynamic(this, &UInventoryItemWidget::OnClicked);
-	}
 }
 
 void UInventoryItemWidget::SetInventorySlot(FInventorySlot NewSlot)
@@ -38,12 +32,15 @@ void UInventoryItemWidget::SetEmpty()
 void UInventoryItemWidget::SetOwner(UInventoryGridWidget* NewOwner)
 {
 	Owner = NewOwner;
+
+	if (MainButton != nullptr)
+	{
+		MainButton->OnClicked.AddUniqueDynamic(this, &UInventoryItemWidget::OnClicked);
+	}
 }
 
 void UInventoryItemWidget::OnClicked()
 {
-	UE_LOG(LogVD, Display, TEXT("Button %s pressed!"), *GetNameSafe(this));
-	
 	if (!bIsEmpty && Owner != nullptr)
 	{
 		Owner->SetActiveSlot(InventorySlot);
@@ -57,14 +54,14 @@ void UInventoryItemWidget::UpdateDisplay()
 {	
 	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
-		if (!bIsEmpty && InventorySlot.Object.IsValid())
+		if (!bIsEmpty && InventorySlot.Object != nullptr)
 		{
-			UInventoryObject* ObjectInstance = InventorySlot.Object.Get();
+			UInventoryObject* Object = InventorySlot.Object;
 			
-			if (ObjectInstance->IconTexture.IsValid())
+			if (Object->IconTexture.IsValid())
 			{
 				DisplayImage->SetVisibility(ESlateVisibility::Visible);
-				DisplayImage->SetBrushFromTexture(ObjectInstance->IconTexture.Get());
+				DisplayImage->SetBrushFromTexture(Object->IconTexture.Get());
 				
 				DisplayText->SetVisibility(ESlateVisibility::Hidden);
 			}
@@ -73,7 +70,7 @@ void UInventoryItemWidget::UpdateDisplay()
 				DisplayImage->SetVisibility(ESlateVisibility::Hidden);
 
 				DisplayText->SetVisibility(ESlateVisibility::Visible);
-				DisplayText->SetText(ObjectInstance->Name);
+				DisplayText->SetText(Object->Name);
 			}
 		}
 		else

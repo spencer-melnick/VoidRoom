@@ -13,10 +13,8 @@ void AVDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
     DOREPLIFETIME(AVDPlayerState, Inventory);
 }
 
-bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
+bool AVDPlayerState::TryPickupObject(UInventoryObject* Object)
 {
-	UInventoryObject* ObjectInstance = Object.Get();
-
 	FInventorySlot* FoundSlot = Inventory.FindByPredicate([Object](const FInventorySlot& Slot)
 	{
 		return Slot.Object == Object;
@@ -67,7 +65,7 @@ void AVDPlayerState::OnRep_Inventory() {
     // Do something here!
 }
 
-void AVDPlayerState::AddToInventory(TSoftObjectPtr<UInventoryObject> Object)
+void AVDPlayerState::AddToInventory(UInventoryObject* Object)
 {
 	FInventorySlot Slot;
 	Slot.Object = Object;

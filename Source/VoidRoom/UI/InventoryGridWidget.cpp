@@ -56,19 +56,29 @@ void UInventoryGridWidget::UpdateDisplay()
 
 void UInventoryGridWidget::SetActiveSlot(FInventorySlot InventorySlot)
 {
-	if (NameText != nullptr && DescriptionText != nullptr && InventorySlot.Object.IsValid())
+	if (NameText != nullptr && DescriptionText != nullptr && InventorySlot.Object != nullptr)
 	{
-		UInventoryObject* ObjectInstance = InventorySlot.Object.Get();
+		NameText->SetText(InventorySlot.Object->Name);
+		DescriptionText->SetText(InventorySlot.Object->Description);
+	}
+}
 
-		NameText->SetText(ObjectInstance->Name);
-		DescriptionText->SetText(ObjectInstance->Description);
+void UInventoryGridWidget::ClearActiveSlot()
+{
+	if (NameText != nullptr && DescriptionText != nullptr)
+	{
+		NameText->SetText(FText());
+		DescriptionText->SetText(FText());
 	}
 }
 
 
 
+
 void UInventoryGridWidget::RecreateGrid()
 {
+	ClearActiveSlot();
+	
 	if (InventoryPanel != nullptr && ItemWidgetClass != nullptr)
 	{
 		InventoryPanel->ClearChildren();

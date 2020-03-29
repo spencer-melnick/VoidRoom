@@ -20,7 +20,7 @@ class VOIDROOM_API AItemPickup : public AInteractiveActor
 
 public:
 	UPROPERTY(EditAnywhere)
-	TSoftObjectPtr<UInventoryObject> Object;
+	UInventoryObject* Object;
 	
 protected:
 	virtual void OnInteract(ACharacter* Character) override;

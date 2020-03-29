@@ -35,6 +35,7 @@ public:
 	// Public functions
 	void UpdateDisplay();
 	void SetActiveSlot(FInventorySlot Slot);
+	void ClearActiveSlot();
 	
 	
 	// Children widgets

@@ -17,11 +17,11 @@ void AItemPickup::OnInteract(ACharacter* Character)
     {
         AVDPlayerState* PlayerState = Controller->GetPlayerState<AVDPlayerState>();
 
-        if (PlayerState != nullptr && Object.IsValid())
+        if (PlayerState != nullptr && Object != nullptr)
         {
             PlayerState->TryPickupObject(Object);
 
-            UE_LOG(LogVD, Display, TEXT("%s picked up a %s"), *Character->GetName(), *Object.GetAssetName());
+            UE_LOG(LogVD, Display, TEXT("%s picked up a %s"), *Character->GetName(), *Object->GetName());
         }
     }
 }
