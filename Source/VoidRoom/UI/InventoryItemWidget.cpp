@@ -41,9 +41,16 @@ void UInventoryItemWidget::SetOwner(UInventoryGridWidget* NewOwner)
 
 void UInventoryItemWidget::OnClicked()
 {
-	if (!bIsEmpty && Owner != nullptr)
+	if (Owner != nullptr)
 	{
-		Owner->SetActiveSlot(InventorySlot);
+		if (!bIsEmpty)
+		{
+			Owner->SetActiveSlot(InventorySlot);
+		}
+		else
+		{
+			Owner->ClearActiveSlot();
+		}
 	}
 }
 
