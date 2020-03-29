@@ -35,4 +35,6 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	EInventoryDuplicationRule DuplicationRule;
+
+	void HandlePickup();
 };

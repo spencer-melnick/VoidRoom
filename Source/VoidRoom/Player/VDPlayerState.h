@@ -39,5 +39,5 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_Inventory();
 
-	void TryHandlePickup(TSoftObjectPtr<UInventoryObject> Object);
+	void AddToInventory(TSoftObjectPtr<UInventoryObject> Object);
 };

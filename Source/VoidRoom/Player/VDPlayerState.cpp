@@ -16,28 +16,20 @@ void AVDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 {
 	UInventoryObject* ObjectInstance = Object.Get();
+
+	FInventorySlot* FoundSlot = Inventory.FindByPredicate([Object](const FInventorySlot& Slot)
+	{
+		return Slot.Object == Object;
+	});
 	
 	switch(Object->DuplicationRule)
 	{
 		case EInventoryDuplicationRule::Unique:
 			{
-				bool bWasDuplicateFound = false;
-				
-				for (auto& i : Inventory)
-				{
-					if (i.Object.GetUniqueID() == Object.GetUniqueID())
-					{
-						bWasDuplicateFound = true;
-						break;
-					}
-				}
 
-				if (!bWasDuplicateFound)
+				if (FoundSlot == nullptr)
 				{
-					FInventorySlot Slot;
-					Slot.Object = Object;
-					Inventory.Add(Slot);
-					TryHandlePickup(Object);
+					AddToInventory(Object);
 				}
 				else
 				{
@@ -49,34 +41,20 @@ bool AVDPlayerState::TryPickupObject(TSoftObjectPtr<UInventoryObject> Object)
 
 		case EInventoryDuplicationRule::Stack:
 			{
-				bool bWasDuplicateFound = false;
-
-				for (auto& i : Inventory)
+				if (FoundSlot == nullptr)
 				{
-					if (i.Object.GetUniqueID() == Object.GetUniqueID())
-					{
-						bWasDuplicateFound = true;
-						i.Count++;
-						break;
-					}
+					AddToInventory(Object);
 				}
-
-				if (!bWasDuplicateFound)
+				else
 				{
-					FInventorySlot Slot;
-					Slot.Object = Object;
-					Inventory.Add(Slot);
-					TryHandlePickup(Object);
+					FoundSlot->Count++;
 				}
 			}
 			break;
 
 		case EInventoryDuplicationRule::Multiple:
 			{
-				FInventorySlot Slot;
-				Slot.Object = Object;
-				Inventory.Add(Slot);
-				TryHandlePickup(Object);
+				AddToInventory(Object);
 			}
 			break;
 	}
@@ -89,21 +67,11 @@ void AVDPlayerState::OnRep_Inventory() {
     // Do something here!
 }
 
-void AVDPlayerState::TryHandlePickup(TSoftObjectPtr<UInventoryObject> Object)
+void AVDPlayerState::AddToInventory(TSoftObjectPtr<UInventoryObject> Object)
 {
-	if (Object.IsValid())
-	{
-		UInventoryObject* ObjectInstance = Object.Get();
-
-		if (ObjectInstance->InventoryBehavior != nullptr)
-		{
-			UInventoryBehavior* BehaviorInstance = ObjectInstance->InventoryBehavior.GetDefaultObject();
-
-			if (BehaviorInstance != nullptr)
-			{
-				BehaviorInstance->OnPickup(Object);
-			}
-		}
-	}
+	FInventorySlot Slot;
+	Slot.Object = Object;
+	Inventory.Add(Slot);
+	Object->HandlePickup();
 }
 
