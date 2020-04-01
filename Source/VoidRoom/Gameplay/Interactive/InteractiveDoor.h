@@ -6,7 +6,8 @@
 #include "InteractiveActor.h"
 #include "PhysicsEngine/PhysicsConstraintComponent.h"
 #include "Components/StaticMeshComponent.h" 
-#include "Components/BoxComponent.h" 
+#include "Components/BoxComponent.h"
+#include "PhysicsEngine/BodyInstance.h" 
 
 
 #include "InteractiveDoor.generated.h"
@@ -22,18 +23,11 @@ class VOIDROOM_API AInteractiveDoor : public AInteractiveActor
 public:
 	AInteractiveDoor(const FObjectInitializer& ObjectInitializer);
 
-	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FVector Dimensions;
 
 	void Open();
 	void Close();
 	void RotateToAngle(float Angle, float DeltaTime);
-
-	UFUNCTION()
-	void RecieveHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse,const FHitResult &HitResult);
 
 protected:
 	virtual void OnInteract(ACharacter* Character) override;
@@ -43,13 +37,22 @@ private:
 	bool TryToLock(float LockAngle);
 
 	UPROPERTY(EditAnywhere)
-	UStaticMeshComponent* Door;
+	UStaticMeshComponent* DoorMesh;
 
 	UPROPERTY(EditAnywhere)
 	UPhysicsConstraintComponent* Hinge;
 
 	UPROPERTY(EditAnywhere)
-	USceneComponent* DoorOpening;
+	USceneComponent* DoorRoot;
+
+	UPROPERTY(EditAnywhere)
+	USceneComponent* Door;
+
+	UPROPERTY(EditAnywhere)
+	USceneComponent* HitboxRoot;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* Hitbox;
 
 	UPROPERTY(VisibleAnywhere, Category = "Behavior")
 	bool bIsOpen = false;
@@ -58,7 +61,10 @@ private:
 	bool bIsClosing = false;
 
 	UPROPERTY(VisibleAnywhere, Category = "Behavior")
-	bool bIsOpening = true;
+	bool bIsOpening = false;
+
+	UPROPERTY(EditAnywhere, Category = "Behavior")
+	float RotateSpeed = 3.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Behavior")
 	float ClosedAngle = 0.0f;
