@@ -27,6 +27,18 @@ void AInteractiveActor::LocalUnfocused(ACharacter* Character)
 	OnLocalUnfocused(Character);
 }
 
+void AInteractiveActor::ServerInteract(ACharacter* Character)
+{
+	if (GetShouldRunOnAllClients())
+	{
+		MulticastInteract(Character);
+	}
+	else
+	{
+		OnInteract(Character);
+	}
+}
+
 
 
 // Networked functions
@@ -54,6 +66,12 @@ void AInteractiveActor::OnInteract(ACharacter* Character)
 {
 	
 }
+
+bool AInteractiveActor::GetShouldRunOnAllClients() const
+{
+	return true;
+}
+
 
 
 

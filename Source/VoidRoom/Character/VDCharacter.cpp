@@ -392,7 +392,7 @@ void AVDCharacter::ServerInteract_Implementation(AActor* Target)
 			}
 			else
 			{
-				InteractiveActor->MulticastInteract(this);
+				InteractiveActor->ServerInteract(this);
 			}
 		}
 	}

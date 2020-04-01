@@ -4,6 +4,7 @@
 #include "VDPlayerController.h"
 
 #include "GameFramework/Pawn.h"
+#include "Blueprint/UserWidget.h"
 
 #include "../Character/VDCharacter.h"
 
@@ -31,6 +32,8 @@ void AVDPlayerController::SetupInputComponent()
 
     InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
     //InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
+
+    InputComponent->BindAction("ToggleInventory", EInputEvent::IE_Pressed, this, &AVDPlayerController::ToggleInventory);
 }
 
 
@@ -38,13 +41,58 @@ void AVDPlayerController::BeginPlay()
 {
     Super::BeginPlay();
 
-	UIWidget = CreateWidget<UUserWidget>(this, UIClass);
+    if (IsLocalPlayerController())
+    {
+        CreateUIWidgets();
+        HideUIWidgets();
+    }
+}
 
-	if (UIWidget != nullptr)
+
+// Public functions
+
+void AVDPlayerController::SetControlState(EControlState NewControlState)
+{
+    HideUIWidgets();
+    ControlState = NewControlState;
+
+	// Switch statement to set input mode and show mouse cursor
+	switch(ControlState)
 	{
-        UIWidget->AddToPlayerScreen(1);
+		case EControlState::GameControl:
+            bShowMouseCursor = false;
+            SetInputMode(FInputModeGameOnly());
+            break;
+
+        case EControlState::MenuControl:
+        case EControlState::InventoryControl:
+            bShowMouseCursor = true;
+            SetInputMode(FInputModeGameAndUI());
+
+			// Center the mouse in the viewport
+            {
+                int ViewportWidth, ViewportHeight;
+                GetViewportSize(ViewportWidth, ViewportHeight);
+                SetMouseLocation(ViewportWidth / 2, ViewportHeight / 2);
+            }
+            break;
+
+        default:
+            break;
+	}
+
+	// Separate switch statement to set visible widgets
+	switch(ControlState)
+	{
+		case EControlState::InventoryControl:
+            InventoryGridWidget->SetVisibility(ESlateVisibility::Visible);
+            break;
+
+        default:
+            break;
 	}
 }
+
 
 
 // Protected VD interface
@@ -128,3 +176,35 @@ void AVDPlayerController::Climb()
         PossessedPawn->TryClimbLedge();
     }
 }
+
+void AVDPlayerController::ToggleInventory()
+{
+	if (ControlState == EControlState::GameControl)
+	{
+        SetControlState(EControlState::InventoryControl);
+	}
+    else if (ControlState == EControlState::InventoryControl)
+    {
+        SetControlState(EControlState::GameControl);
+    }
+}
+
+
+
+// Private functions
+void AVDPlayerController::CreateUIWidgets()
+{
+    InventoryGridWidget = CreateWidget<UUserWidget>(this, InventoryGridClass);
+
+	if (InventoryGridWidget != nullptr)
+	{
+        InventoryGridWidget->AddToPlayerScreen();
+	}
+}
+
+void AVDPlayerController::HideUIWidgets()
+{
+    InventoryGridWidget->SetVisibility(ESlateVisibility::Hidden);
+}
+
+

@@ -17,15 +17,16 @@ void AItemPickup::OnInteract(ACharacter* Character)
     {
         AVDPlayerState* PlayerState = Controller->GetPlayerState<AVDPlayerState>();
 
-        if (PlayerState != nullptr)
+        if (PlayerState != nullptr && Object != nullptr)
         {
-            FInventoryObject PickupItem;
-            PickupItem.Name = PickupName;
+            PlayerState->TryPickupObject(Object);
 
-            PlayerState->Inventory.Add(PickupItem);
-
-            UE_LOG(LogVD, Display, TEXT("%s picked up a %s"), *Character->GetName(), *PickupName);
+            UE_LOG(LogVD, Display, TEXT("%s picked up a %s"), *Character->GetName(), *Object->GetName());
         }
     }
 }
 
+bool AItemPickup::GetShouldRunOnAllClients() const
+{
+    return false;
+}
