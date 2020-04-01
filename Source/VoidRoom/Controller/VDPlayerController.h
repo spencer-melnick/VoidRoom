@@ -47,9 +47,6 @@ protected:
 	void Jump();
 	void EndJump();
 
-	void Jump();
-	void EndJump();
-
 	void Crouch();
 	void UnCrouch();
 
