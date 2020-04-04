@@ -10,6 +10,7 @@
 #include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
 
 #include "../VoidRoom.h"
 #include "../Gameplay/Interactive/InteractiveActor.h"
@@ -28,9 +29,14 @@ AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	LookRotator = CreateDefaultSubobject <USphereComponent>(TEXT("LookRotator"));
 	LookRotator->SetupAttachment(ViewAttachment);
 
+	//Spawn the constraint we use to pick up objects
 	CarrierConstraint = CreateDefaultSubobject<UPhysicsConstraintComponent>(TEXT("CarrierConstraint"));
 	CarrierConstraint->SetupAttachment(GetRootComponent());
 	
+	//Spawn a hitbox for use in attacks !!DEBUG ONLY!!
+	DefaultAttackHitbox = CreateDefaultSubobject<UBoxComponent>(TEXT("Default Attack Hitbox"));
+	DefaultAttackHitbox->SetupAttachment(ViewAttachment);
+
 	// Spawn first person camera
 	FirstPersonCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
 	FirstPersonCamera->SetupAttachment(ViewAttachment);
@@ -198,6 +204,24 @@ void AVDCharacter::TryClimbLedge()
 	}
 }
 
+void AVDCharacter::Attack()
+{
+	if (bCanAttack)
+	{
+		TSet<AActor*> Targets;
+		DefaultAttackHitbox->SetHiddenInGame(false, false);
+		DefaultAttackHitbox->GetOverlappingActors(Targets);
+		GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AVDCharacter::OnCooldownTimerEnd, AttackCooldown, false);
+		for (AActor* Target : Targets)
+		{
+			if (Target != this)
+			{
+				UE_LOG(LogVD, Display, TEXT("Player hit %s with an attack!"), *GetNameSafe(Target))
+			}
+		}
+	}
+}
+
 void AVDCharacter::DropListener(int32 ConstraintIndex)
 {
 	bIsCarryingObject = false;
@@ -358,6 +382,14 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 
 	return false;
 }
+
+void AVDCharacter::OnCooldownTimerEnd()
+{
+	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
+	UE_LOG(LogVD, Display, TEXT("Equipment is ready to use again!"))
+	DefaultAttackHitbox->SetHiddenInGame(true, false);
+}
+
 // Networked functions
 
 bool AVDCharacter::ServerSetLookPitch_Validate(float NewPitch)

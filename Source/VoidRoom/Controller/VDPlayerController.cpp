@@ -33,6 +33,8 @@ void AVDPlayerController::SetupInputComponent()
     InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
     //InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
 
+    InputComponent->BindAction("Attack", EInputEvent::IE_Pressed, this, &AVDPlayerController::Attack);
+
     InputComponent->BindAction("ToggleInventory", EInputEvent::IE_Pressed, this, &AVDPlayerController::ToggleInventory);
 }
 
@@ -174,6 +176,16 @@ void AVDPlayerController::Climb()
     if (PossessedPawn != nullptr)
     {
         PossessedPawn->TryClimbLedge();
+    }
+}
+
+void AVDPlayerController::Attack()
+{
+    AVDCharacter* PossessedPawn = Cast<AVDCharacter>(GetPawn());
+
+    if (PossessedPawn != nullptr)
+    {
+        PossessedPawn->Attack();
     }
 }
 
