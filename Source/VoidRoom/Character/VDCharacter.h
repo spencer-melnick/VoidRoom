@@ -92,10 +92,12 @@ protected:
 	void CheckFocus();
 	void UpdateTriggerCapsule();
 	bool CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation);
+	void UpdateEquippedTool();
 
 	UFUNCTION()
 	void OnCooldownTimerEnd();
 
+	
 	// Networked functions
 	UFUNCTION(Unreliable, Server, WithValidation)
 	void ServerSetLookPitch(float NewPitch);
@@ -107,22 +109,32 @@ protected:
 	void ServerDropObject();
 	UFUNCTION(Reliable, NetMulticast)
 	void MulticastDropObject();
+	
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerEquipTool(TSubclassOf<class UTool> ToolClass);
+
+
+	// Replication events
+	UFUNCTION()
+	void OnRep_EquippedToolClass();
 
 
 private:
 	// Attached components
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
+	UPROPERTY(EditAnywhere, Category = VDCharacter)
+	USkeletalMeshComponent* ViewMesh;
 	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	UBoxComponent* DefaultAttackHitbox;
 
-
+	// Physics carry components
 	UPhysicsConstraintComponent* CarrierConstraint;
 	USphereComponent* LookRotator;
-	
-	bool bCanAttack = true;
-	float AttackCooldown = 2.0f;
-	FTimerHandle CooldownTimerHandle;
+
+	// Tool component
+	UPROPERTY(Transient)
+	UTool* EquippedTool = nullptr;
 
 	// Cached component casts
 	UVDCharacterMovementComponent* CharacterMovementComponent;
@@ -130,6 +142,15 @@ private:
 	// Normal operating variables
 	// UPROPERTY(Replicated)
 	AActor* FocusedActor = nullptr;
+
+	// Test attack code
+	bool bCanAttack = true;
+	float AttackCooldown = 2.0f;
+	FTimerHandle CooldownTimerHandle;
+
+	// Replicated variables
 	UPROPERTY(Replicated)
 	float LookPitch;
+	UPROPERTY(Replicated, ReplicatedUsing = OnRep_EquippedToolClass)
+	TSubclassOf<class UTool> EquippedToolClass;
 };

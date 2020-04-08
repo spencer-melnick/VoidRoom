@@ -6,6 +6,7 @@
 #include "Math/UnrealMathUtility.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "DrawDebugHelpers.h"
@@ -14,6 +15,8 @@
 
 #include "../VoidRoom.h"
 #include "../Gameplay/Interactive/InteractiveActor.h"
+#include "VoidRoom/Player/VDPlayerState.h"
+#include "VoidRoom/Gameplay/Tools/Tool.h"
 
 AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UVDCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -24,6 +27,14 @@ AVDCharacter::AVDCharacter(const FObjectInitializer& ObjectInitializer)
 	// Spawn view attachment
 	ViewAttachment = CreateDefaultSubobject<USceneComponent>(TEXT("ViewAttachment"));
 	ViewAttachment->SetupAttachment(GetRootComponent());
+
+	// Spawn view mesh
+	ViewMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ViewMesh"));
+	ViewMesh->SetupAttachment(ViewAttachment);
+	// Set the bounds scale to prevent the view mesh from being culled
+	ViewMesh->SetBoundsScale(10);
+	// Make only visible to owning player
+	ViewMesh->SetOnlyOwnerSee(true);
 
 	//Spawn physical representation of view attachment
 	LookRotator = CreateDefaultSubobject <USphereComponent>(TEXT("LookRotator"));
@@ -383,6 +394,45 @@ bool AVDCharacter::CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeL
 	return false;
 }
 
+void AVDCharacter::UpdateEquippedTool()
+{
+	bool bIsToolChanged = false;
+	
+	if (EquippedTool != nullptr)
+	{
+		if (EquippedTool->StaticClass() != EquippedToolClass)
+		{
+			// Swapped out existing tool for a new one
+			bIsToolChanged = true;
+		}
+	}
+	else if (EquippedToolClass != nullptr)
+	{
+		// Equipped a tool where none was previously equipped
+		bIsToolChanged = true;
+	}
+
+	if (bIsToolChanged)
+	{
+		if (EquippedTool != nullptr)
+		{
+			// Destroy the old tool
+			EquippedTool->DestroyComponent();
+
+			// Reset animation blueprint
+			ViewMesh->SetAnimClass(nullptr);
+		}
+
+		// Create a new tool component from the new tool class
+		EquippedTool = Cast<UTool>(CreateDefaultSubobject(TEXT("EquippedTool"), EquippedToolClass, UTool::StaticClass(), true, false));
+
+		// Attach it to the specified socket and set the new animation blueprint
+		EquippedTool->SetupAttachment(ViewMesh, EquippedTool->GetAttachmentSocket());
+		ViewMesh->SetAnimClass(EquippedTool->GetCharacterViewAnimationBlueprint());
+	}
+}
+
+
 void AVDCharacter::OnCooldownTimerEnd()
 {
 	GetWorld()->GetTimerManager().ClearTimer(CooldownTimerHandle);
@@ -475,3 +525,56 @@ void AVDCharacter::MulticastDropObject_Implementation()
 	CarrierConstraint->BreakConstraint();
 	bIsCarryingObject = false;
 }
+
+bool AVDCharacter::ServerEquipTool_Validate(TSubclassOf<UTool> ToolClass)
+{
+	APlayerState* BasePlayerState = GetPlayerState();
+
+	if (BasePlayerState == nullptr)
+	{
+		// For now, unpossessed pawns can equip whatever they want
+		// this should theoretically allow for AI characters to equip
+		// tools without having an inventory
+		return true;
+	}
+
+	AVDPlayerState* VDPlayerState = Cast<AVDPlayerState>(BasePlayerState);
+
+	if (VDPlayerState != nullptr)
+	{
+		FInventorySlot* FoundSlot = VDPlayerState->Inventory.FindByPredicate([ToolClass](const FInventorySlot& InventorySlot)
+		{
+			if (InventorySlot.Object->ToolComponent->StaticClass() == ToolClass.Get())
+			{
+				return true;
+			}
+
+			return false;
+		});
+
+		if (FoundSlot != nullptr)
+		{
+			return true;
+		}
+
+		UE_LOG(LogVD, Warning, TEXT("%s attempted to equip tool %s that is not in their inventory"), *GetNameSafe(this), *ToolClass->GetName());
+		return false;
+	}
+	else
+	{
+		UE_LOG(LogVD, Warning, TEXT("%s has a player state that is not derived from VDPlayerState, and therefore cannot equip tools"), *GetNameSafe(this));
+		return false;
+	}
+}
+
+void AVDCharacter::ServerEquipTool_Implementation(TSubclassOf<UTool> ToolClass)
+{
+	// For now just set the tool class and let the engine replicate the update when it becomes relevant
+	EquippedToolClass = ToolClass;
+}
+
+void AVDCharacter::OnRep_EquippedToolClass()
+{
+	UpdateEquippedTool();
+}
+

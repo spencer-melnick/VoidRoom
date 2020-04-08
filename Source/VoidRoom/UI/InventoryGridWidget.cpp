@@ -13,6 +13,11 @@ void UInventoryGridWidget::SynchronizeProperties()
 	Super::SynchronizeProperties();
 	
 	RecreateGrid();
+
+	if (EquipButton != nullptr)
+	{
+		EquipButton->OnClicked.AddUniqueDynamic(this, &UInventoryGridWidget::OnEquipClicked);
+	}
 }
 
 void UInventoryGridWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -100,6 +105,11 @@ void UInventoryGridWidget::RecreateGrid()
 			}
 		}
 	}
+}
+
+void UInventoryGridWidget::OnEquipClicked()
+{
+	
 }
 
 

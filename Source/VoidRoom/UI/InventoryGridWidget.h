@@ -48,6 +48,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	UUniformGridPanel* InventoryPanel = nullptr;
 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	UButton* EquipButton = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSubclassOf<UInventoryItemWidget> ItemWidgetClass = nullptr;
 
@@ -61,6 +64,9 @@ public:
 
 private:
 	void RecreateGrid();
+
+	UFUNCTION()
+	void OnEquipClicked();
 
 	TArray<UInventoryItemWidget*> ItemWidgets;
 };

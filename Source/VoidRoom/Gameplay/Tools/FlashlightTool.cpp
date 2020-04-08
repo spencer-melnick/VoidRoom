@@ -7,25 +7,13 @@
 #include "VoidRoom/Character/VDCharacter.h"
 
 // Sets default values
-AFlashlightTool::AFlashlightTool()
+UFlashlightTool::UFlashlightTool()
 {
-	PrimaryActorTick.bCanEverTick = true;
-
+	
 }
 
-void AFlashlightTool::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 
-}
-
-void AFlashlightTool::BeginPlay()
-{
-	Super::BeginPlay();
-
-}
-
-void AFlashlightTool::OnFire(AVDCharacter* Character)
+void UFlashlightTool::OnFire(AVDCharacter* Character)
 {
 	bIsOn = !bIsOn;
 

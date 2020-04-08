@@ -3,4 +3,20 @@
 
 #include "Tool.h"
 
-// Add default functionality here for any ITool functions that are not pure virtual.
+void UTool::OnFire(AVDCharacter* Character)
+{
+	
+}
+
+
+TSubclassOf<UAnimInstance> UTool::GetCharacterViewAnimationBlueprint() const
+{
+	return CharacterViewAnimationBlueprint;
+}
+
+FName UTool::GetAttachmentSocket() const
+{
+	return AttachmentSocket;
+}
+
+

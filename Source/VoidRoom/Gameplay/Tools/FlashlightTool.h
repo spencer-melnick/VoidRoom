@@ -10,19 +10,14 @@
 #include "FlashlightTool.generated.h"
 
 UCLASS()
-class VOIDROOM_API AFlashlightTool : public AActor, public ITool
+class VOIDROOM_API UFlashlightTool : public UTool
 {
 	GENERATED_BODY()
 	
 public:	
-	AFlashlightTool();
-
-	virtual void Tick(float DeltaTime) override;
+	UFlashlightTool();
 
 	virtual void OnFire(class AVDCharacter* Character) override;
-
-protected:
-	virtual void BeginPlay() override;
 
 private:
 	bool bIsOn = false;

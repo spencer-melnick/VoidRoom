@@ -3,22 +3,28 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/Interface.h"
+#include "Animation/AnimInstance.h"
 #include "Tool.generated.h"
 
-UINTERFACE(MinimalAPI)
-class UTool : public UInterface
-{
-	GENERATED_BODY()
-};
-
-/**
- * 
- */
-class VOIDROOM_API ITool
+UCLASS(Abstract, Blueprintable)
+class VOIDROOM_API UTool: public USceneComponent
 {
 	GENERATED_BODY()
 
 public:
-	virtual void OnFire(class AVDCharacter* Character) = 0;
+	// Interface functions
+	virtual void OnFire(class AVDCharacter* Character);
+
+	// Accessors
+	TSubclassOf<UAnimInstance> GetCharacterViewAnimationBlueprint() const;
+	FName GetAttachmentSocket() const;
+
+private:
+	UPROPERTY(EditAnywhere, Category = Tool)
+	TSubclassOf<UAnimInstance> CharacterViewAnimationBlueprint;
+	// Controls the animation for the character's first person view
+
+	UPROPERTY(EditAnywhere, Category = Tool)
+	FName AttachmentSocket = NAME_None;
+	// Where, if anywhere, this component is attached to the character
 };

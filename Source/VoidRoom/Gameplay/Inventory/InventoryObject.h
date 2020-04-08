@@ -39,8 +39,8 @@ public:
 	UPROPERTY(EditAnywhere)
 	EInventoryDuplicationRule DuplicationRule;
 
-	UPROPERTY(EditAnywhere, meta = (MustImplement = "Tool"))
-	TSubclassOf<AActor> ToolActor;
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class UTool> ToolComponent;
 
 	void HandlePickup();
 };
