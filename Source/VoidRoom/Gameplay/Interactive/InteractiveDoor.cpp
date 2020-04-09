@@ -50,7 +50,17 @@ void AInteractiveDoor::Tick(float DeltaTime)
 
 void AInteractiveDoor::OnInteract(ACharacter* Character)
 {
-	if (bIsOpen)
+	if (bIsOpening)
+	{
+		bIsOpening = false;
+		bIsClosing = true;
+	}
+	else if (bIsClosing)
+	{
+		bIsClosing = false;
+		bIsOpening = true;
+	}
+	else if (bIsOpen)
 	{
 		Close();
 	}

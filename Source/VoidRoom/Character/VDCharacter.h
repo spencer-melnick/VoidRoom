@@ -10,6 +10,7 @@
 #include "VDCharacterMovementComponent.h"
 #include "../Gameplay/Interactive/InteractiveActor.h"
 #include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
 
 #include "VDCharacter.generated.h"
 
@@ -51,6 +52,8 @@ public:
 	void Interact();
 	void TryClimbLedge();
 
+	void Attack();
+
 	UFUNCTION()
 	void DropListener(int32 ConstraintIndex);
 	
@@ -90,6 +93,9 @@ protected:
 	void UpdateTriggerCapsule();
 	bool CheckForClimbableLedge(FVector& WallLocation, FVector& LedgeLocation);
 
+	UFUNCTION()
+	void OnCooldownTimerEnd();
+
 	// Networked functions
 	UFUNCTION(Unreliable, Server, WithValidation)
 	void ServerSetLookPitch(float NewPitch);
@@ -107,13 +113,17 @@ private:
 	// Attached components
 	USceneComponent* ViewAttachment;
 	UCameraComponent* FirstPersonCamera;
-
+	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
+	UBoxComponent* DefaultAttackHitbox;
 
 	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	UPhysicsConstraintComponent* CarrierConstraint;
-	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	USphereComponent* LookRotator;
 	
+	bool bCanAttack = true;
+	float AttackCooldown = 2.0f;
+	FTimerHandle CooldownTimerHandle;
+
 	// Cached component casts
 	UVDCharacterMovementComponent* CharacterMovementComponent;
 

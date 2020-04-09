@@ -53,6 +53,8 @@ protected:
 	void Interact();
 	void Climb();
 
+	void Attack();
+
 	void ToggleInventory();
 
 private:
