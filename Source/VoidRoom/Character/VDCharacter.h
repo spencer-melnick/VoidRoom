@@ -116,7 +116,7 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	UBoxComponent* DefaultAttackHitbox;
 
-
+	UPROPERTY(VisibleAnywhere, Category = VDCharacter)
 	UPhysicsConstraintComponent* CarrierConstraint;
 	USphereComponent* LookRotator;
 	
