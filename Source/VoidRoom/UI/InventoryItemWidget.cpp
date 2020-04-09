@@ -13,18 +13,31 @@ void UInventoryItemWidget::SynchronizeProperties()
 	UpdateDisplay();
 }
 
-void UInventoryItemWidget::SetInventorySlot(FInventorySlot NewSlot)
+void UInventoryItemWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-	bIsEmpty = false;
-	InventorySlot = NewSlot;
-
 	UpdateDisplay();
 }
 
-void UInventoryItemWidget::SetEmpty()
+void UInventoryItemWidget::NativeOnInitialized()
 {
-	bIsEmpty = true;
-	InventorySlot = FInventorySlot();
+	APlayerController* Player = GetOwningPlayer();
+
+	if (Player != nullptr)
+	{
+		PlayerState = Player->GetPlayerState<AVDPlayerState>();
+		
+		if (PlayerState == nullptr)
+		{
+			UE_LOG(LogVD, Warning, TEXT("%s is bound to a player without a VDPlayerState"), *GetNameSafe(this));
+		}
+	}
+}
+
+
+
+void UInventoryItemWidget::SetInventorySlot(int32 NewInventoryIndex)
+{
+	InventoryIndex = NewInventoryIndex;
 
 	UpdateDisplay();
 }
@@ -39,17 +52,29 @@ void UInventoryItemWidget::SetOwner(UInventoryGridWidget* NewOwner)
 	}
 }
 
+bool UInventoryItemWidget::GetIsEmpty() const
+{
+	if (PlayerState == nullptr)
+	{
+		return true;
+	}
+
+	// Considered not empty if the index is less than the size of the inventory array
+	return InventoryIndex >= PlayerState->Inventory.Num();
+}
+
+
 void UInventoryItemWidget::OnClicked()
 {
 	if (Owner != nullptr)
 	{
-		if (!bIsEmpty)
+		if (!GetIsEmpty())
 		{
-			Owner->SetActiveSlot(InventorySlot);
+			Owner->SetActiveSlot(InventoryIndex);
 		}
 		else
 		{
-			Owner->ClearActiveSlot();
+			Owner->HideActiveSlot();
 		}
 	}
 }
@@ -58,12 +83,13 @@ void UInventoryItemWidget::OnClicked()
 
 
 void UInventoryItemWidget::UpdateDisplay()
-{	
+{
+	// Check for the components existing first
 	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
-		if (!bIsEmpty && InventorySlot.Object != nullptr)
+		if (!GetIsEmpty())
 		{
-			UInventoryObject* Object = InventorySlot.Object;
+			UInventoryObject* Object = PlayerState->Inventory[InventoryIndex].Object;
 			
 			if (Object->IconTexture.IsValid())
 			{

@@ -91,6 +91,7 @@ void AVDCharacter::Tick(float DeltaTime)
 
 	AdjustEyeHeight();
 	UpdateViewRotation();
+	UpdateEquippedTool();
 }
 
 void AVDCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -232,6 +233,14 @@ void AVDCharacter::Attack()
 		}
 	}
 }
+
+void AVDCharacter::EquipTool(TSubclassOf<UTool> ToolClass)
+{
+	UE_LOG(LogVD, Display, TEXT("%s attempting to equip a %s"), *GetNameSafe(this), *ToolClass->GetName());
+	
+	ServerEquipTool(ToolClass);
+}
+
 
 void AVDCharacter::DropListener(int32 ConstraintIndex)
 {
@@ -400,7 +409,7 @@ void AVDCharacter::UpdateEquippedTool()
 	
 	if (EquippedTool != nullptr)
 	{
-		if (EquippedTool->StaticClass() != EquippedToolClass)
+		if (EquippedTool->GetClass() != EquippedToolClass)
 		{
 			// Swapped out existing tool for a new one
 			bIsToolChanged = true;
@@ -414,8 +423,12 @@ void AVDCharacter::UpdateEquippedTool()
 
 	if (bIsToolChanged)
 	{
+		UE_LOG(LogVD, Display, TEXT("%s equipped a %s"), *GetNameSafe(this), *EquippedToolClass->GetName())
+		
 		if (EquippedTool != nullptr)
 		{
+			UE_LOG(LogVD, Display, TEXT("Previously equipped was %s"), *EquippedTool->GetClass()->GetName())
+			
 			// Destroy the old tool
 			EquippedTool->DestroyComponent();
 
@@ -424,7 +437,7 @@ void AVDCharacter::UpdateEquippedTool()
 		}
 
 		// Create a new tool component from the new tool class
-		EquippedTool = Cast<UTool>(CreateDefaultSubobject(TEXT("EquippedTool"), EquippedToolClass, UTool::StaticClass(), true, false));
+		EquippedTool = Cast<UTool>(NewObject<UTool>(this, EquippedToolClass, TEXT("EquippedTool")));
 
 		// Attach it to the specified socket and set the new animation blueprint
 		EquippedTool->SetupAttachment(ViewMesh, EquippedTool->GetAttachmentSocket());
@@ -544,7 +557,7 @@ bool AVDCharacter::ServerEquipTool_Validate(TSubclassOf<UTool> ToolClass)
 	{
 		FInventorySlot* FoundSlot = VDPlayerState->Inventory.FindByPredicate([ToolClass](const FInventorySlot& InventorySlot)
 		{
-			if (InventorySlot.Object->ToolComponent->StaticClass() == ToolClass.Get())
+			if (InventorySlot.Object->ToolComponent == ToolClass)
 			{
 				return true;
 			}

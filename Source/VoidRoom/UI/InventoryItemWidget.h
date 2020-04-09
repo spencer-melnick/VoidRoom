@@ -29,11 +29,13 @@ class VOIDROOM_API UInventoryItemWidget : public UUserWidget
 public:
 	// Engine overrides
 	void SynchronizeProperties() override;
+	void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	void NativeOnInitialized() override;
 
 	// Public functions
-	void SetInventorySlot(FInventorySlot NewSlot);
-	void SetEmpty();
+	void SetInventorySlot(int32 SlotIndex);
 	void SetOwner(class UInventoryGridWidget* NewOwner);
+	bool GetIsEmpty() const;
 
 	UFUNCTION()
 	void OnClicked();
@@ -51,7 +53,7 @@ public:
 private:
 	void UpdateDisplay();
 
-	bool bIsEmpty = true;
-	FInventorySlot InventorySlot;
+	AVDPlayerState* PlayerState;
+	int32 InventoryIndex;
 	class UInventoryGridWidget* Owner = nullptr;
 };

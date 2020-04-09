@@ -12,6 +12,8 @@
 #include "Components/SphereComponent.h"
 #include "Components/BoxComponent.h"
 
+#include "VoidRoom/Gameplay/Tools/Tool.h"
+
 #include "VDCharacter.generated.h"
 
 UCLASS()
@@ -53,6 +55,8 @@ public:
 	void TryClimbLedge();
 
 	void Attack();
+
+	void EquipTool(TSubclassOf<class UTool> ToolClass);
 
 	UFUNCTION()
 	void DropListener(int32 ConstraintIndex);
@@ -151,6 +155,6 @@ private:
 	// Replicated variables
 	UPROPERTY(Replicated)
 	float LookPitch;
-	UPROPERTY(Replicated, ReplicatedUsing = OnRep_EquippedToolClass)
-	TSubclassOf<class UTool> EquippedToolClass;
+	UPROPERTY(VisibleAnywhere, Replicated, ReplicatedUsing = OnRep_EquippedToolClass)
+	TSubclassOf<UTool> EquippedToolClass;
 };

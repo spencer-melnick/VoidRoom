@@ -6,14 +6,17 @@
 #include "../VoidRoom.h"
 #include "../Controller/VDPlayerController.h"
 #include "../Player/VDPlayerState.h"
+#include "VoidRoom/Character/VDCharacter.h"
 
 
 void UInventoryGridWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
-	
+
+	// Build the children grid widgets
 	RecreateGrid();
 
+	// Attach main buttons
 	if (EquipButton != nullptr)
 	{
 		EquipButton->OnClicked.AddUniqueDynamic(this, &UInventoryGridWidget::OnEquipClicked);
@@ -22,11 +25,10 @@ void UInventoryGridWidget::SynchronizeProperties()
 
 void UInventoryGridWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-	UpdateDisplay();
+	// UpdateDisplay();
 }
 
-
-void UInventoryGridWidget::UpdateDisplay()
+void UInventoryGridWidget::NativeOnInitialized()
 {
 	// Check for valid player controller and player state
 	AVDPlayerController* PlayerController = Cast<AVDPlayerController>(GetOwningPlayer());
@@ -37,58 +39,77 @@ void UInventoryGridWidget::UpdateDisplay()
 		return;
 	}
 
-	AVDPlayerState* PlayerState = PlayerController->GetPlayerState<AVDPlayerState>();
+
+	PlayerState = PlayerController->GetPlayerState<AVDPlayerState>();
 
 	if (PlayerState == nullptr)
 	{
 		UE_LOG(LogVD, Error, TEXT("%s cannot get a valid VDPlayerState"), *GetNameSafe(this));
 		return;
 	}
-
-	// Update the properties of all the item widgets
-	for (int i = 0; i < ItemWidgets.Num(); i++)
-	{
-		if (i < PlayerState->Inventory.Num())
-		{
-			ItemWidgets[i]->SetInventorySlot(PlayerState->Inventory[i]);
-		}
-		else
-		{
-			ItemWidgets[i]->SetEmpty();
-		}
-	}
 }
 
-void UInventoryGridWidget::SetActiveSlot(FInventorySlot InventorySlot)
-{
-	if (NameText != nullptr && DescriptionText != nullptr && InventorySlot.Object != nullptr)
-	{
-		NameText->SetText(InventorySlot.Object->Name);
-		DescriptionText->SetText(InventorySlot.Object->Description);
-	}
-}
 
-void UInventoryGridWidget::ClearActiveSlot()
+
+void UInventoryGridWidget::UpdateDisplay()
 {
 	if (NameText != nullptr && DescriptionText != nullptr)
 	{
-		NameText->SetText(FText());
-		DescriptionText->SetText(FText());
+		if (GetIsShowingActiveSlot())
+		{
+			UInventoryObject* Object = PlayerState->Inventory[ActiveInventoryIndex].Object;
+
+			NameText->SetText(Object->Name);
+			DescriptionText->SetText(Object->Description);
+			EquipButton->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			NameText->SetText(FText());
+			DescriptionText->SetText(FText());
+			EquipButton->SetVisibility(ESlateVisibility::Hidden);
+		}
 	}
 }
 
+void UInventoryGridWidget::SetActiveSlot(int32 NewInventoryIndex)
+{
+	ActiveInventoryIndex = NewInventoryIndex;
+	bShouldDisplayActiveItem = true;
+
+	UpdateDisplay();
+}
+
+void UInventoryGridWidget::HideActiveSlot()
+{
+	bShouldDisplayActiveItem = false;
+
+	UpdateDisplay();
+}
+
+bool UInventoryGridWidget::GetIsShowingActiveSlot() const
+{
+	if (PlayerState == nullptr)
+	{
+		return false;
+	}
+	
+	return bShouldDisplayActiveItem && ActiveInventoryIndex < PlayerState->Inventory.Num();
+}
 
 
 
 void UInventoryGridWidget::RecreateGrid()
 {
-	ClearActiveSlot();
+	HideActiveSlot();
 	
 	if (InventoryPanel != nullptr && ItemWidgetClass != nullptr)
 	{
 		InventoryPanel->ClearChildren();
 		ItemWidgets.Empty();
 
+		uint32 InventoryIndex = 0;
+		
 		for (int Row = 0; Row < Rows; Row++)
 		{
 			for (int Column = 0; Column < Columns; Column++)
@@ -102,6 +123,7 @@ void UInventoryGridWidget::RecreateGrid()
 
 				ItemWidgets.Add(InventoryItemWidget);
 				InventoryItemWidget->SetOwner(this);
+				InventoryItemWidget->SetInventorySlot(InventoryIndex++);
 			}
 		}
 	}
@@ -109,7 +131,17 @@ void UInventoryGridWidget::RecreateGrid()
 
 void UInventoryGridWidget::OnEquipClicked()
 {
-	
+	if (GetIsShowingActiveSlot())
+	{
+		UInventoryObject* Object = PlayerState->Inventory[ActiveInventoryIndex].Object;
+
+		if (Object->ToolComponent != nullptr)
+		{
+			// Possibly move this logic out to the player controller instead
+			AVDCharacter* Character = Cast<AVDCharacter>(GetOwningPlayerPawn());
+			Character->EquipTool(Object->ToolComponent);
+		}
+	}
 }
 
 
