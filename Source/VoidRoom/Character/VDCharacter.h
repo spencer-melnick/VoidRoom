@@ -155,6 +155,6 @@ private:
 	// Replicated variables
 	UPROPERTY(Replicated)
 	float LookPitch;
-	UPROPERTY(VisibleAnywhere, Replicated, ReplicatedUsing = OnRep_EquippedToolClass)
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_EquippedToolClass)
 	TSubclassOf<UTool> EquippedToolClass;
 };

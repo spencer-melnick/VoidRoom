@@ -141,6 +141,7 @@ void AVDCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AVDCharacter, LookPitch)
+	DOREPLIFETIME(AVDCharacter, EquippedToolClass)
 }
 
 
@@ -427,8 +428,6 @@ void AVDCharacter::UpdateEquippedTool()
 		
 		if (EquippedTool != nullptr)
 		{
-			UE_LOG(LogVD, Display, TEXT("Previously equipped was %s"), *EquippedTool->GetClass()->GetName())
-			
 			// Destroy the old tool
 			EquippedTool->DestroyComponent();
 
@@ -588,6 +587,6 @@ void AVDCharacter::ServerEquipTool_Implementation(TSubclassOf<UTool> ToolClass)
 
 void AVDCharacter::OnRep_EquippedToolClass()
 {
-	UpdateEquippedTool();
+
 }
 
