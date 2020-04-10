@@ -30,14 +30,13 @@ public:
 	// Engine overrides
 	void SynchronizeProperties() override;
 	void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-	void NativeOnInitialized() override;
 
 
 	// Public functions
 	void UpdateDisplay();
 	void SetActiveSlot(int32 NewInventorySlot);
 	void HideActiveSlot();
-	bool GetIsShowingActiveSlot() const;
+	struct FInventorySlot* GetActiveSlot() const;
 	
 	
 	// Children widgets
@@ -71,7 +70,6 @@ private:
 	void OnEquipClicked();
 
 	TArray<UInventoryItemWidget*> ItemWidgets;
-	AVDPlayerState* PlayerState;
 	int32 ActiveInventoryIndex;
 	bool bShouldDisplayActiveItem = false;
 };

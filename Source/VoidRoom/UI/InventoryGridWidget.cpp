@@ -3,9 +3,9 @@
 
 #include "InventoryGridWidget.h"
 
-#include "../VoidRoom.h"
-#include "../Controller/VDPlayerController.h"
-#include "../Player/VDPlayerState.h"
+#include "VoidRoom/VoidRoom.h"
+#include "VoidRoom/Controller/VDPlayerController.h"
+#include "VoidRoom/Player/VDPlayerState.h"
 #include "VoidRoom/Character/VDCharacter.h"
 
 
@@ -28,36 +28,17 @@ void UInventoryGridWidget::NativeTick(const FGeometry& MyGeometry, float InDelta
 	// UpdateDisplay();
 }
 
-void UInventoryGridWidget::NativeOnInitialized()
-{
-	// Check for valid player controller and player state
-	AVDPlayerController* PlayerController = Cast<AVDPlayerController>(GetOwningPlayer());
-
-	if (PlayerController == nullptr)
-	{
-		UE_LOG(LogVD, Error, TEXT("%s cannot get a valid VDPlayerController"), *GetNameSafe(this));
-		return;
-	}
-
-
-	PlayerState = PlayerController->GetPlayerState<AVDPlayerState>();
-
-	if (PlayerState == nullptr)
-	{
-		UE_LOG(LogVD, Error, TEXT("%s cannot get a valid VDPlayerState"), *GetNameSafe(this));
-		return;
-	}
-}
-
 
 
 void UInventoryGridWidget::UpdateDisplay()
 {
 	if (NameText != nullptr && DescriptionText != nullptr)
 	{
-		if (GetIsShowingActiveSlot())
+		FInventorySlot* ActiveSlot = GetActiveSlot();
+		
+		if (ActiveSlot != nullptr)
 		{
-			UInventoryObject* Object = PlayerState->Inventory[ActiveInventoryIndex].Object;
+			UInventoryObject* Object = ActiveSlot->Object;
 
 			NameText->SetText(Object->Name);
 			DescriptionText->SetText(Object->Description);
@@ -87,15 +68,38 @@ void UInventoryGridWidget::HideActiveSlot()
 	UpdateDisplay();
 }
 
-bool UInventoryGridWidget::GetIsShowingActiveSlot() const
+FInventorySlot* UInventoryGridWidget::GetActiveSlot() const
 {
+	if (!bShouldDisplayActiveItem)
+	{
+		return nullptr;
+	}
+
+	APlayerController* PlayerController = GetOwningPlayer();
+
+	if (PlayerController == nullptr)
+	{
+		UE_LOG(LogVD, Error, TEXT("%s is not associated with a player controller"), *GetNameSafe(this));
+		return nullptr;
+	}
+
+	AVDPlayerState* PlayerState = PlayerController->GetPlayerState<AVDPlayerState>();
+
 	if (PlayerState == nullptr)
 	{
-		return false;
+		return nullptr;
 	}
-	
-	return bShouldDisplayActiveItem && ActiveInventoryIndex < PlayerState->Inventory.Num();
+
+	auto& Inventory = PlayerState->Inventory;
+
+	if (ActiveInventoryIndex >= Inventory.Num())
+	{
+		return nullptr;
+	}
+
+	return &Inventory[ActiveInventoryIndex];
 }
+
 
 
 
@@ -129,11 +133,14 @@ void UInventoryGridWidget::RecreateGrid()
 	}
 }
 
+
 void UInventoryGridWidget::OnEquipClicked()
 {
-	if (GetIsShowingActiveSlot())
+	FInventorySlot* ActiveSlot = GetActiveSlot();
+	
+	if (ActiveSlot != nullptr)
 	{
-		UInventoryObject* Object = PlayerState->Inventory[ActiveInventoryIndex].Object;
+		UInventoryObject* Object = ActiveSlot->Object;
 
 		if (Object->ToolComponent != nullptr)
 		{

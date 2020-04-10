@@ -4,6 +4,7 @@
 #include "InventoryItemWidget.h"
 
 #include "VoidRoom/VoidRoom.h"
+#include "VoidRoom/Player/VDPlayerState.h"
 #include "InventoryGridWidget.h"
 
 void UInventoryItemWidget::SynchronizeProperties()
@@ -16,21 +17,6 @@ void UInventoryItemWidget::SynchronizeProperties()
 void UInventoryItemWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	UpdateDisplay();
-}
-
-void UInventoryItemWidget::NativeOnInitialized()
-{
-	APlayerController* Player = GetOwningPlayer();
-
-	if (Player != nullptr)
-	{
-		PlayerState = Player->GetPlayerState<AVDPlayerState>();
-		
-		if (PlayerState == nullptr)
-		{
-			UE_LOG(LogVD, Warning, TEXT("%s is bound to a player without a VDPlayerState"), *GetNameSafe(this));
-		}
-	}
 }
 
 
@@ -52,23 +38,40 @@ void UInventoryItemWidget::SetOwner(UInventoryGridWidget* NewOwner)
 	}
 }
 
-bool UInventoryItemWidget::GetIsEmpty() const
+FInventorySlot* UInventoryItemWidget::GetAssociatedSlot() const
 {
-	if (PlayerState == nullptr)
+	APlayerController* PlayerController = GetOwningPlayer();
+
+	if (PlayerController == nullptr)
 	{
-		return true;
+		UE_LOG(LogVD, Error, TEXT("%s is not associated with a player controller"), *GetNameSafe(this));
+		return nullptr;
 	}
 
-	// Considered not empty if the index is less than the size of the inventory array
-	return InventoryIndex >= PlayerState->Inventory.Num();
+	AVDPlayerState* PlayerState = PlayerController->GetPlayerState<AVDPlayerState>();
+
+	if (PlayerState == nullptr)
+	{
+		return nullptr;
+	}
+
+	auto& Inventory = PlayerState->Inventory;
+
+	if (InventoryIndex >= Inventory.Num())
+	{
+		return nullptr;
+	}
+
+	return &Inventory[InventoryIndex];
 }
+
 
 
 void UInventoryItemWidget::OnClicked()
 {
 	if (Owner != nullptr)
 	{
-		if (!GetIsEmpty())
+		if (GetAssociatedSlot() != nullptr)
 		{
 			Owner->SetActiveSlot(InventoryIndex);
 		}
@@ -87,9 +90,11 @@ void UInventoryItemWidget::UpdateDisplay()
 	// Check for the components existing first
 	if (DisplayText != nullptr && DisplayImage != nullptr)
 	{
-		if (!GetIsEmpty())
+		FInventorySlot* InventorySlot = GetAssociatedSlot();
+		
+		if (InventorySlot != nullptr)
 		{
-			UInventoryObject* Object = PlayerState->Inventory[InventoryIndex].Object;
+			UInventoryObject* Object = InventorySlot->Object;
 			
 			if (Object->IconTexture.IsValid())
 			{
@@ -113,6 +118,4 @@ void UInventoryItemWidget::UpdateDisplay()
 		}
 	}
 }
-
-
 

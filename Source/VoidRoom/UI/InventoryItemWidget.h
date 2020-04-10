@@ -13,7 +13,6 @@
 
 // Game includes
 #include "../Gameplay/Inventory/InventoryObject.h"
-#include "VoidRoom/Player/VDPlayerState.h"
 
 // Generated header
 #include "InventoryItemWidget.generated.h"
@@ -30,12 +29,11 @@ public:
 	// Engine overrides
 	void SynchronizeProperties() override;
 	void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-	void NativeOnInitialized() override;
 
 	// Public functions
 	void SetInventorySlot(int32 SlotIndex);
 	void SetOwner(class UInventoryGridWidget* NewOwner);
-	bool GetIsEmpty() const;
+	struct FInventorySlot* GetAssociatedSlot() const;
 
 	UFUNCTION()
 	void OnClicked();
@@ -53,7 +51,6 @@ public:
 private:
 	void UpdateDisplay();
 
-	AVDPlayerState* PlayerState;
 	int32 InventoryIndex;
 	class UInventoryGridWidget* Owner = nullptr;
 };
