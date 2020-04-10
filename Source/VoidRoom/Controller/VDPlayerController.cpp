@@ -30,10 +30,9 @@ void AVDPlayerController::SetupInputComponent()
     InputComponent->BindAction("Crouch", EInputEvent::IE_Pressed, this, &AVDPlayerController::Crouch);
     InputComponent->BindAction("Crouch", EInputEvent::IE_Released, this, &AVDPlayerController::UnCrouch);
 
-    InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
+    InputComponent->BindAction("Interact", EInputEvent::IE_Pressed, this, &AVDPlayerController::Interact);
     //InputComponent->BindAction("Climb", EInputEvent::IE_Pressed, this, &AVDPlayerController::Climb);
-
-    //InputComponent->BindAction("Attack", EInputEvent::IE_Pressed, this, &AVDPlayerController::Attack);
+    InputComponent->BindAction("PrimaryAction", EInputEvent::IE_Pressed, this, &AVDPlayerController::PrimaryAction);
 
     InputComponent->BindAction("ToggleInventory", EInputEvent::IE_Pressed, this, &AVDPlayerController::ToggleInventory);
 }
@@ -179,13 +178,13 @@ void AVDPlayerController::Climb()
     }
 }
 
-void AVDPlayerController::Attack()
+void AVDPlayerController::PrimaryAction()
 {
     AVDCharacter* PossessedPawn = Cast<AVDCharacter>(GetPawn());
 
     if (PossessedPawn != nullptr)
     {
-        PossessedPawn->Attack();
+        PossessedPawn->UseTool();
     }
 }
 

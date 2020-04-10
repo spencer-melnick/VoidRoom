@@ -17,7 +17,7 @@ class VOIDROOM_API UFlashlightTool : public UTool
 public:	
 	UFlashlightTool();
 
-	virtual void OnFire(class AVDCharacter* Character) override;
+	virtual void OnUse(class AVDCharacter* Character) override;
 
 private:
 	bool bIsOn = false;

@@ -13,9 +13,14 @@ class VOIDROOM_API UTool: public USceneComponent
 
 public:
 	// Interface functions
-	virtual void OnFire(class AVDCharacter* Character);
 
+	// Due to the character calling Tool::OnUse from a multicast RPC, OnUse will run
+	// on all players' machines. Make sure to check for local control if necessary
+	virtual void OnUse(class AVDCharacter* Character);
+
+	
 	// Accessors
+	
 	TSubclassOf<UAnimInstance> GetCharacterViewAnimationBlueprint() const;
 	FName GetAttachmentSocket() const;
 

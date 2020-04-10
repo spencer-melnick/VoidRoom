@@ -217,22 +217,9 @@ void AVDCharacter::TryClimbLedge()
 	}
 }
 
-void AVDCharacter::Attack()
+void AVDCharacter::UseTool()
 {
-	if (bCanAttack)
-	{
-		TSet<AActor*> Targets;
-		DefaultAttackHitbox->SetHiddenInGame(false, false);
-		DefaultAttackHitbox->GetOverlappingActors(Targets);
-		GetWorld()->GetTimerManager().SetTimer(CooldownTimerHandle, this, &AVDCharacter::OnCooldownTimerEnd, AttackCooldown, false);
-		for (AActor* Target : Targets)
-		{
-			if (Target != this)
-			{
-				UE_LOG(LogVD, Display, TEXT("Player hit %s with an attack!"), *GetNameSafe(Target))
-			}
-		}
-	}
+	ServerUseTool();
 }
 
 void AVDCharacter::EquipTool(TSubclassOf<UTool> ToolClass)
@@ -439,7 +426,7 @@ void AVDCharacter::UpdateEquippedTool()
 		EquippedTool = Cast<UTool>(NewObject<UTool>(this, EquippedToolClass, TEXT("EquippedTool")));
 
 		// Attach it to the specified socket and set the new animation blueprint
-		EquippedTool->SetupAttachment(ViewMesh, EquippedTool->GetAttachmentSocket());
+		EquippedTool->SetupAttachment(RootComponent);
 		ViewMesh->SetAnimClass(EquippedTool->GetCharacterViewAnimationBlueprint());
 	}
 }
@@ -584,6 +571,29 @@ void AVDCharacter::ServerEquipTool_Implementation(TSubclassOf<UTool> ToolClass)
 	// For now just set the tool class and let the engine replicate the update when it becomes relevant
 	EquippedToolClass = ToolClass;
 }
+
+bool AVDCharacter::ServerUseTool_Validate()
+{
+	return true;
+}
+
+void AVDCharacter::ServerUseTool_Implementation()
+{
+	MulticastUseTool();
+}
+
+
+void AVDCharacter::MulticastUseTool_Implementation()
+{
+	if (EquippedTool != nullptr)
+	{
+		EquippedTool->OnUse(this);
+	}
+}
+
+
+
+
 
 void AVDCharacter::OnRep_EquippedToolClass()
 {

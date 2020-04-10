@@ -3,7 +3,7 @@
 
 #include "Tool.h"
 
-void UTool::OnFire(AVDCharacter* Character)
+void UTool::OnUse(AVDCharacter* Character)
 {
 	
 }

@@ -53,10 +53,8 @@ public:
 
 	void Interact();
 	void TryClimbLedge();
-
-	void Attack();
-
 	void EquipTool(TSubclassOf<class UTool> ToolClass);
+	void UseTool();
 
 	UFUNCTION()
 	void DropListener(int32 ConstraintIndex);
@@ -100,7 +98,6 @@ protected:
 
 	UFUNCTION()
 	void OnCooldownTimerEnd();
-
 	
 	// Networked functions
 	UFUNCTION(Unreliable, Server, WithValidation)
@@ -116,6 +113,10 @@ protected:
 	
 	UFUNCTION(Reliable, Server, WithValidation)
 	void ServerEquipTool(TSubclassOf<class UTool> ToolClass);
+	UFUNCTION(Reliable, Server, WithValidation)
+	void ServerUseTool();
+	UFUNCTION(Reliable, NetMulticast)
+	void MulticastUseTool();
 
 
 	// Replication events

@@ -13,7 +13,7 @@ UFlashlightTool::UFlashlightTool()
 }
 
 
-void UFlashlightTool::OnFire(AVDCharacter* Character)
+void UFlashlightTool::OnUse(AVDCharacter* Character)
 {
 	bIsOn = !bIsOn;
 
