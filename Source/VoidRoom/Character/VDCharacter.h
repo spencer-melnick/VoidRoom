@@ -36,7 +36,7 @@ public:
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 
-	// VD interfaces
+	// Getters
 	USceneComponent* GetViewAttachment() const;
 	UCameraComponent* GetFirstPersonCamera() const;
 	
@@ -47,6 +47,11 @@ public:
 	AActor* GetFocusedActor() const;
 	bool GetCanFocus() const;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UTool* GetEquippedTool() const;
+
+
+	// Actions
 	void StartCrouch();
 	void StartUncrouch();
 	void ToggleCrouch();

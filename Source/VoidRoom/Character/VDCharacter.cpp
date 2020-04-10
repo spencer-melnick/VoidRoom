@@ -177,6 +177,12 @@ bool AVDCharacter::GetCanFocus() const
 	return !bIsCarryingObject;
 }
 
+UTool* AVDCharacter::GetEquippedTool() const
+{
+	return EquippedTool;
+}
+
+
 
 
 void AVDCharacter::StartCrouch()
